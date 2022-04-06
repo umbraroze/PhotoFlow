@@ -32,6 +32,14 @@
     Datestamp for the backup file name. Defaults to current day in
     YYYYMMDD format.
 
+.PARAMETER SkipBackup
+    Skip the backup step of the workflow - will not create an archive
+    file of the photos on the card.
+
+.PARAMETER SkipImport
+    Skip the importing step of the workflow - will not move the photos
+    to Incoming and will not move to subsequent folders.
+
 .NOTES
     Filename: photo_importinator.ps1
     Author: Rose Midford
