@@ -117,7 +117,7 @@ if(-Not $Destination) {
         $Destination = $settings.Destination
     }
 }
-if($settings.Cameras.$Camera.Card) {
+if((-Not $Card) -and $settings.Cameras.$Camera.Card) {
     $Card = $settings.Cameras.$Camera.Card
 }
 
