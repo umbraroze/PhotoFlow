@@ -91,18 +91,22 @@ function Write-Box {
 function Move-ImageFolder {
     Param([string]$InFolder,[string]$OutFolder,[string[]]$Ignored)
     Get-ChildItem $InFolder | ForEach-Object {
+        $ig = $false;
         $Source = Join-Path -Path $InFolder -ChildPath $_ 
         $Target = Join-Path -Path $OutFolder -ChildPath $_
         if($Ignored) {
             $Ignored | ForEach-Object {
                 if([io.path]::GetFileName($Source) -eq $_) {
-                    Write-Output "${Source} ignored"
-                    break;
+                    $ig = $true;
                 }
             }
         }
-        Write-Output ("${Source} "+[char]0x2b62+" ${Target}")
-        Move-Item $Source $Target
+        if($ig) {
+            Write-Output "${Source} ignored"
+        } else {
+            Write-Output ("${Source} "+[char]0x2b62+" ${Target}")
+            Move-Item $Source $Target
+        }
     }
 }
 
