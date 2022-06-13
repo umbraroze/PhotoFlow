@@ -7,14 +7,12 @@
     cards and dropbox to NAS.
 
     This program expects to find exiftool.exe on PATH, and expects
-    7-Zip to be installed on default location.
-
-    The configuration file (photo_importinator_config.json) should be
-    put to $HOME\Documents\WindowsPowerShell\ folkder
+    7-Zip to be installed on default location. These can be overridden
+    in the configuration file.
 
 .PARAMETER Card
-    The SD card drive to import from (e.g. "D:\"). If specified as
-    "Dropbox", will import from Dropbox Camera Uploads subfolder in
+    The SD card drive to import from (e.g. "D:"). If specified as
+    "Dropbox", will import from Dropbox "Camera Uploads" subfolder in
     current user's home folder instead.
 
 .PARAMETER Camera
@@ -40,6 +38,10 @@
     Skip the importing step of the workflow - will not move the photos
     to Incoming and will not move to subsequent folders.
 
+.PARAMETER SettingsFile
+    Where script settings are located. Default
+    "~\Documents\WindowsPowerShell\photo_importinator_config.psd1".
+
 .NOTES
     Filename: photo_importinator.ps1
     Author: Rose Midford
@@ -58,7 +60,7 @@ Param(
     [switch]$SkipImport,
     [string]$SettingsFile = (Join-Path `
         -Path ([Environment]::GetFolderPath('MyDocuments')+"\WindowsPowerShell\") `
-        -ChildPath "photo_importinator_config.json")
+        -ChildPath "photo_importinator_config.psd1")
 )
 
 ############################################################
@@ -86,6 +88,24 @@ function Write-Box {
     Write-Host -ForegroundColor Cyan -NoNewline ([string]([char]0x2500) * 68)
     Write-Host -ForegroundColor Cyan ([char]0x2518)
 }
+function Move-ImageFolder {
+    Param([string]$InFolder,[string]$OutFolder,[string[]]$Ignored)
+    Get-ChildItem $InFolder | ForEach-Object {
+        $Source = Join-Path -Path $InFolder -ChildPath $_ 
+        $Target = Join-Path -Path $OutFolder -ChildPath $_
+        if($Ignored) {
+            $Ignored | ForEach-Object {
+                if([io.path]::GetFileName($Source) -eq $_) {
+                    Write-Output "${Source} ignored"
+                    break;
+                }
+            }
+        }
+        Write-Output ("${Source} "+[char]0x2b62+" ${Target}")
+        Move-Item $Source $Target
+    }
+}
+
 
 ############################################################
 # MAIN PROGRAM
@@ -96,7 +116,7 @@ $7zip = "${env:ProgramFiles}\7-Zip\7z.exe"
 $exiftool = "exiftool.exe"
 
 # Read the settings.
-$settings = Get-Content -Path $SettingsFile -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
+$settings = Import-PowerShellDataFile $SettingsFile -ErrorAction Stop
 
 if(-Not $settings.Cameras.$Camera) {
     throw "Can't find camera $Camera in settings"
@@ -204,22 +224,15 @@ if($SkipImport) {
 } else {
     $t = Resolve-Path (Join-Path -Path $Destination -ChildPath "Incoming") -ErrorAction Stop
     # Move stuff from the card to Incoming
+    # TODO: Maybe move some of this stuff into functions???
     if($Card -eq "Dropbox") {
         Write-Output "Dropbox folder ${inputdir}"
-        Get-ChildItem $inputdir | ForEach-Object {
-            $s = Join-Path -Path $inputdir -ChildPath $_ 
-            Write-Output ("${s} "+[char]0x2b62+" ${t}")
-            Move-Item $s $t
-        }
+        Move-ImageFolder -InFolder $inputdir -OutFolder $t -Ignored $settings.Cameras.$Camera.Ignore
     } else {
         Get-ChildItem $inputdir | ForEach-Object {
-            $sf = Join-Path -Path $inputdir -ChildPath $_
-            Write-Output "SD card DCIM subfolder ${sf}"
-            Get-ChildItem $sf | ForEach-Object {
-                $s = Join-Path -Path $sf -ChildPath $_ 
-                Write-Output ("${s} "+[char]0x2b62+" ${t}")
-                Move-Item $s $t
-            }
+            $sourcefolder = Join-Path -Path $inputdir -ChildPath $_
+            Write-Output "SD card DCIM subfolder ${sourcefolder}"
+            Move-ImageFolder -InFolder $sourcefolder -OutFolder $t -Ignored $settings.Cameras.$Camera.Ignore
         }
     }
 
