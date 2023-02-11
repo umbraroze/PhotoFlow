@@ -20,3 +20,12 @@ $infiles | ForEach-Object {
     Write-Output "`n`nProcessing $in => $out`n`n";
     Move-Item $in $out
 }
+$infiles = Get-Item *.avi
+$infiles | ForEach-Object {
+    $in = $_;
+    $d = Get-Date -UFormat "%Y%m%d_%H%M%S" $in.LastWriteTime;
+    $p = Split-Path $in;
+    $out = $p  + "\" + $d + "_" + $in.BaseName + ".avi";
+    Write-Output "`n`nProcessing $in => $out`n`n";
+    Move-Item $in $out
+}
