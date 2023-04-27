@@ -38,6 +38,10 @@
     Skip the importing step of the workflow - will not move the photos
     to Incoming and will not move to subsequent folders.
 
+.PARAMETER DryRun
+    Do all the actions except actually moving/backing up the files.
+    Will print out what actions would be performed instead.
+
 .PARAMETER SettingsFile
     Where script settings are located. Default
     "~\Documents\WindowsPowerShell\photo_importinator_config.psd1".
@@ -58,6 +62,7 @@ Param(
     [string]$Date = (Get-Date -Format "yyyyMMdd"),
     [switch]$SkipBackup,
     [switch]$SkipImport,
+    [switch]$DryRun,
     [string]$SettingsFile = (Join-Path `
         -Path ([Environment]::GetFolderPath('MyDocuments')+"\WindowsPowerShell\") `
         -ChildPath "photo_importinator_config.psd1")
@@ -90,21 +95,22 @@ function Write-Box {
 }
 function Move-ImageFolder {
     Param([string]$InFolder,[string]$OutFolder,[string[]]$Ignored)
-    Get-ChildItem $InFolder | ForEach-Object {
-        $ig = $false;
+    $items = Get-ChildItem $InFolder
+    :image foreach($_ in $items) {
         $Source = Join-Path -Path $InFolder -ChildPath $_ 
         $Target = Join-Path -Path $OutFolder -ChildPath $_
         if($Ignored) {
-            $Ignored | ForEach-Object {
+            foreach($_ in $Ignored) {
                 if([io.path]::GetFileName($Source) -eq $_) {
-                    $ig = $true;
+                    Write-Output "${Source} ignored"
+                    continue image
                 }
             }
         }
-        if($ig) {
-            Write-Output "${Source} ignored"
+        if($DryRun) {
+            Write-Output ("Would move: ${Source} "+[char]0x27a1+" ${Target}")
         } else {
-            Write-Output ("${Source} "+[char]0x2b62+" ${Target}")
+            Write-Output ("${Source} "+[char]0x27a1+" ${Target}")
             Move-Item $Source $Target
         }
     }
@@ -117,7 +123,8 @@ function Move-ImageFolder {
 # The utilities we need. These can be overridden in the
 # config file if needed.
 $7zip = "${env:ProgramFiles}\7-Zip\7z.exe"
-$exiftool = "exiftool.exe"
+$exiftool = "exiftool.exe" # Assumed to be on path somewhere
+# $dngconverter = "${env:ProgramFiles}\Adobe\Adobe DNG Converter\Adobe DNG Converter.exe"
 
 # Read the settings.
 $settings = Import-PowerShellDataFile $SettingsFile -ErrorAction Stop
@@ -127,6 +134,7 @@ if(-Not $settings.Cameras.$Camera) {
 }
 if($settings.Tools.SevenZip) { $7zip = $settings.Tools.SevenZip }
 if($settings.Tools.ExifTool) { $exiftool = $settings.Tools.ExifTool }
+# if($settings.Tools.DngConverter) { $dngconverter = $settings.Tools.DngConverter }
 if(-Not $Backup) {
     if($settings.Cameras.$Camera.Backup) {
         $Backup = $settings.Cameras.$Camera.Backup
@@ -201,7 +209,7 @@ if($Card -eq "Dropbox") {
 # Backup the card contents
 Write-Line
 if($SkipBackup) {
-    Write-Output (([char]0x26A0)+" Skipping backup")
+    Write-Host -ForegroundColor Yellow (([char]0x26A0)+" [Skipped] Entire backup phase")
 } else {
     Try
     {
@@ -215,16 +223,20 @@ if($SkipBackup) {
     Write-Output "Input folder: ${inputdir}"
     Write-Output "Output archive: ${archive}"
 
-    & $7zip a -t7z -r $archive $inputdir 
-    if(!$?) {
-        throw "7-Zip process returned an error"
+    if($DryRun) {
+        Write-Host -ForegroundColor Yellow (([char]0x26A0)+" [Skipped] ${7zip} a -t7z -r ${archive} ${inputdir}")
+    } else {
+        & $7zip a -t7z -r $archive $inputdir 
+        if(!$?) {
+            throw "7-Zip process returned an error"
+        }
     }
 }
 
 # Move the photos to the Incoming folder, and from there to the desired folder structure.
 Write-Line
 if($SkipImport) {
-    Write-Output (([char]0x26A0)+" Skipping import")
+    Write-Host -ForegroundColor Yellow (([char]0x26A0)+" [Skipped] Entire import phase")
 } else {
     $t = Resolve-Path (Join-Path -Path $Destination -ChildPath "Incoming") -ErrorAction Stop
     # Move stuff from the card to Incoming
@@ -242,13 +254,17 @@ if($SkipImport) {
 
     # Run ExifTool to import
     Write-Output "Moving the photos from Incoming to the destination folders..."
-    $l = Get-Location
-    Set-Location -Path $Destination
-    # TODO: make the output folder format configurable???
-    & $exiftool -r "-Directory<DateTimeOriginal" -d "%Y/%m/%d" Incoming
-    $r = $?
-    Set-Location $l
-    if(!$r) {
-        throw "ExifTool returned an error"
+    if($DryRun) {
+        Write-Host -ForegroundColor Yellow (([char]0x26A0)+" [Skipped] ${exiftool} -r `"-Directory<DateTimeOriginal`" -d `"%Y/%m/%d`" Incoming")
+    } else {
+        $l = Get-Location
+        Set-Location -Path $Destination
+        # TODO: make the output folder format configurable???
+        & $exiftool -r "-Directory<DateTimeOriginal" -d "%Y/%m/%d" Incoming
+        $r = $?
+        Set-Location $l
+        if(!$r) {
+            throw "ExifTool returned an error"
+        }
     }
 }
