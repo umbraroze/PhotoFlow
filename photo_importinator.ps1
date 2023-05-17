@@ -99,6 +99,11 @@ function Move-ImageFolder {
     :image foreach($_ in $items) {
         $Source = Join-Path -Path $InFolder -ChildPath $_ 
         $Target = Join-Path -Path $OutFolder -ChildPath $_
+        # This will strip the "Microsoft.PowerShell.Core\FileSystem::" part
+        # from target.
+        # FIXME: This should actually use something like Convert-Path, but
+        # Convert-Path requires path to be resolvable.
+        $DispTarget = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Target)
         if($Ignored) {
             foreach($_ in $Ignored) {
                 if([io.path]::GetFileName($Source) -eq $_) {
@@ -108,9 +113,9 @@ function Move-ImageFolder {
             }
         }
         if($DryRun) {
-            Write-Output ("Would move: ${Source} "+[char]0x27a1+" ${Target}")
-        } else {
-            Write-Output ("${Source} "+[char]0x27a1+" ${Target}")
+            Write-Output ("Would move: ${Source} "+[char]0x27a1+" ${DispTarget}")
+        } else {            
+            Write-Output ("${Source} "+[char]0x27a1+" ${DispTarget}")
             Move-Item $Source $Target
         }
     }
