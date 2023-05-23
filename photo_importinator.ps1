@@ -6,9 +6,9 @@
     This tool will perform three steps of moving photographs from SD
     cards and dropbox to NAS.
 
-    This program expects to find exiftool.exe on PATH, and expects
-    7-Zip to be installed on default location. These can be overridden
-    in the configuration file.
+    This program expects to find exiv2 on PATH, and expects
+    7-Zip to be installed on default location. Exact paths of
+    these utilities can be overridden in the configuration file.
 
 .PARAMETER Card
     The SD card drive to import from (e.g. "D:"). If specified as
@@ -23,12 +23,15 @@
     config file; if specified here, will override that value.
 
 .PARAMETER Destination
-    The destination folder for the images. Images will be temporarily
-    put in subfolder "Incoming".
+    The base destination folder for the images.
+
+.PARAMETER FolderStructure
+    The folder structure for images, using the original photo date.
+    Default: '{0:yyyy}/{0:MM}/{0:dd}'
 
 .PARAMETER Date
     Datestamp for the backup file name. Defaults to current day in
-    YYYYMMDD format.
+    yyyyMMdd format.
 
 .PARAMETER SkipBackup
     Skip the backup step of the workflow - will not create an archive
@@ -93,25 +96,46 @@ function Write-Box {
     Write-Host -ForegroundColor Cyan -NoNewline ([string]([char]0x2500) * 68)
     Write-Host -ForegroundColor Cyan ([char]0x2518)
 }
+
 function Move-ImageFolder {
     Param([string]$InFolder,[string]$OutFolder,[string[]]$Ignored)
     $items = Get-ChildItem $InFolder
     :image foreach($_ in $items) {
+        # Get the full source image path 
         $Source = Join-Path -Path $InFolder -ChildPath $_ 
-        $Target = Join-Path -Path $OutFolder -ChildPath $_
-        # This will strip the "Microsoft.PowerShell.Core\FileSystem::" part
-        # from target.
-        # FIXME: This should actually use something like Convert-Path, but
-        # Convert-Path requires path to be resolvable.
-        $DispTarget = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Target)
+        # Check of the file is ignored
         if($Ignored) {
-            foreach($_ in $Ignored) {
-                if([io.path]::GetFileName($Source) -eq $_) {
+            foreach($i in $Ignored) {
+                if([io.path]::GetFileName($Source) -eq $i) {
                     Write-Output "${Source} ignored"
                     continue image
                 }
             }
         }
+        # Get the datestamp and format it into a folder name (or "Incoming" if unknown)
+        if(-Not ((& $Exiv2 --key 'Exif.Photo.DateTimeOriginal' $Source) -match '(\d\d\d\d:\d\d:\d\d \d\d:\d\d:\d\d)$')) {
+            Write-Host -ForegroundColor Yellow (([char]0x26A0)+" No original date for $Source, putting it to Incoming")
+            $DateFolder = "Incoming"
+        } else {
+            $DateFolder = $FolderStructure -f [DateTime]::parseexact($Matches[1],'yyyy:MM:dd HH:mm:ss',$null)    
+        }
+        # Form the full target folder and file paths
+        $TargetFolder = Join-Path -Path $OutFolder -ChildPath $DateFolder
+        $Target = Join-Path -Path $TargetFolder -ChildPath $_
+        # Strip the "Microsoft.PowerShell.Core\FileSystem::" part from target
+        # for display purposes.
+        # FIXME: This should actually use something like Convert-Path, but
+        # Convert-Path requires path to be resolvable.
+        $DispTarget = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Target)
+        # Create the target folder if it doesn't exist
+        if(-Not (Test-Path $TargetFolder)) {
+            if($DryRun) {
+                Write-Host -ForegroundColor Yellow (([char]0x26A0)+" Would create a folder")
+            } else {
+                $null = New-Item $TargetFolder -ItemType Directory
+            }
+        }
+        # Perform the actual move.
         if($DryRun) {
             Write-Output ("Would move: ${Source} "+[char]0x27a1+" ${DispTarget}")
         } else {            
@@ -127,9 +151,8 @@ function Move-ImageFolder {
 
 # The utilities we need. These can be overridden in the
 # config file if needed.
-$7zip = "${env:ProgramFiles}\7-Zip\7z.exe"
-$exiftool = "exiftool.exe" # Assumed to be on path somewhere
-# $dngconverter = "${env:ProgramFiles}\Adobe\Adobe DNG Converter\Adobe DNG Converter.exe"
+$7zip = "${env:ProgramFiles}\7-Zip\7z.exe" # Default install location
+$exiv2 = "exiv2.exe" # Assumed to be on path somewhere
 
 # Read the settings.
 $settings = Import-PowerShellDataFile $SettingsFile -ErrorAction Stop
@@ -138,8 +161,7 @@ if(-Not $settings.Cameras.$Camera) {
     throw "Can't find camera $Camera in settings"
 }
 if($settings.Tools.SevenZip) { $7zip = $settings.Tools.SevenZip }
-if($settings.Tools.ExifTool) { $exiftool = $settings.Tools.ExifTool }
-# if($settings.Tools.DngConverter) { $dngconverter = $settings.Tools.DngConverter }
+if($settings.Tools.Exiv2) { $exiv2 = $settings.Tools.Exiv2 }
 if(-Not $Backup) {
     if($settings.Cameras.$Camera.Backup) {
         $Backup = $settings.Cameras.$Camera.Backup
@@ -154,6 +176,14 @@ if(-Not $Destination) {
         $Destination = $settings.Destination
     }
 }
+if(-Not $FolderStructure) {
+    if($settings.FolderStructure) {
+        $FolderStructure = $settings.FolderStructure
+    } else {
+        $FolderStructure = '{0:yyyy}/{0:MM}/{0:dd}'
+    }
+}
+$ExampleDestination = Join-Path -Path $Destination -ChildPath ($FolderStructure -replace '\{0:(.*?)\}','$1')
 if((-Not $Card) -and $settings.Cameras.$Camera.Card) {
     $Card = $settings.Cameras.$Camera.Card
 }
@@ -167,7 +197,7 @@ Settings:
   Camera:        ${Camera}
   Card:          ${Card}
   Backup folder: ${Backup}
-  Destination:   ${Destination}
+  Destination:   ${ExampleDestination}
 "@
 Write-Line
 
@@ -243,33 +273,16 @@ Write-Line
 if($SkipImport) {
     Write-Host -ForegroundColor Yellow (([char]0x26A0)+" [Skipped] Entire import phase")
 } else {
-    $t = Resolve-Path (Join-Path -Path $Destination -ChildPath "Incoming") -ErrorAction Stop
     # Move stuff from the card to Incoming
     # TODO: Maybe move some of this stuff into functions???
     if($Card -eq "Dropbox") {
         Write-Output "Dropbox folder ${inputdir}"
-        Move-ImageFolder -InFolder $inputdir -OutFolder $t -Ignored $settings.Cameras.$Camera.Ignore
+        Move-ImageFolder -InFolder $inputdir -OutFolder $Destination -Ignored $settings.Cameras.$Camera.Ignore
     } else {
         Get-ChildItem $inputdir | ForEach-Object {
             $sourcefolder = Join-Path -Path $inputdir -ChildPath $_
             Write-Output "SD card DCIM subfolder ${sourcefolder}"
-            Move-ImageFolder -InFolder $sourcefolder -OutFolder $t -Ignored $settings.Cameras.$Camera.Ignore
-        }
-    }
-
-    # Run ExifTool to import
-    Write-Output "Moving the photos from Incoming to the destination folders..."
-    if($DryRun) {
-        Write-Host -ForegroundColor Yellow (([char]0x26A0)+" [Skipped] ${exiftool} -r `"-Directory<DateTimeOriginal`" -d `"%Y/%m/%d`" Incoming")
-    } else {
-        $l = Get-Location
-        Set-Location -Path $Destination
-        # TODO: make the output folder format configurable???
-        & $exiftool -r "-Directory<DateTimeOriginal" -d "%Y/%m/%d" Incoming
-        $r = $?
-        Set-Location $l
-        if(!$r) {
-            throw "ExifTool returned an error"
+            Move-ImageFolder -InFolder $sourcefolder -OutFolder $Destination -Ignored $settings.Cameras.$Camera.Ignore
         }
     }
 }

@@ -6,7 +6,7 @@ written primarily in PowerShell, meant to be used on Windows host.
 ## Photo Importinator
 
 This script will import images from SD card or Dropbox to a NAS,
-creating a backup archive. Requires exiftool and 7-Zip.
+creating a backup archive. Requires exiv2 and 7-Zip.
 
 ## Find Empty Day Folders
 
