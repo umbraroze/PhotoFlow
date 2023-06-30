@@ -7,7 +7,7 @@ $infiles | ForEach-Object {
     $p = Split-Path $in;
 
     if(-Not (Test-Path $d)) {
-        New-Item -Name $d -ItemType "directory"
+        $null = New-Item -Name $d -ItemType "directory"
     }
 
     $out = $p  + "\" + $d + "\" + $in.Name;
