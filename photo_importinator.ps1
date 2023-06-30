@@ -136,11 +136,15 @@ function Move-ImageFolder {
             }
         }
         # Perform the actual move.
-        if($DryRun) {
-            Write-Output ("Would move: ${Source} "+[char]0x27a1+" ${DispTarget}")
-        } else {            
-            Write-Output ("${Source} "+[char]0x27a1+" ${DispTarget}")
-            Move-Item $Source $Target
+        if(-Not (Test-Path $Target)) {
+            if($DryRun) {
+                Write-Output ("Would move: ${Source} "+[char]0x27a1+" ${DispTarget}")
+            } else {            
+                Write-Output ("${Source} "+[char]0x27a1+" ${DispTarget}")
+                Move-Item $Source $Target
+            }
+        } else {
+            Write-Host -ForegroundColor Yellow ("${Source} "+[char]0x274e+" ${DispTarget} [Already exists]")
         }
     }
 }
