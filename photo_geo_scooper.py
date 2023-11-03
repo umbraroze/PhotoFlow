@@ -65,7 +65,7 @@ try:
     opts, args = getopt.getopt(sys.argv[1:], "i:o:v", ["input=", "output=","verbose"])
 except getopt.GetoptError as err:
     print(err)
-    print("Usage: photo_geo_scooper [-i inputdir] [-o outputdir] [-v]")
+    print("Usage: photo_geo_scooper [-i inputdir] [-o output.kml] [-v]")
     sys.exit(2)
 verbose_mode = False
 input_dir = "."
@@ -95,15 +95,25 @@ for root, dirs, files in os.walk(input_dir):
         if not os.path.isfile(fqfile):
             continue
         # OK, we're cool, continuing
-        if(verbose_mode):
+        if verbose_mode:
             print(f"Processing {fqfile}")
         # Read the image EXIF data
-        img = exiv2.ImageFactory.open(fqfile)
+        try:
+            img = exiv2.ImageFactory.open(fqfile)
+        except exiv2.Exiv2Error:
+            if verbose_mode:
+                print(" - This file can't be read by Exiv2. Skipping.")
+            continue
         img.readMetadata()
         data = img.exifData()
         #for k in data:
         #    print(k)
-        date = parse_exif_date(str(data["Exif.Photo.DateTimeOriginal"].getValue()))
+        date_raw = data["Exif.Photo.DateTimeOriginal"].getValue()
+        if date_raw == None:
+            if verbose_mode:
+                print(" - No date found, skipping")
+            continue
+        date = parse_exif_date(str(date_raw))
         if verbose_mode:
             print(f" - Date: {date}")
 
@@ -113,11 +123,18 @@ for root, dirs, files in os.walk(input_dir):
             kml_lat, kml_lon = parse_exif_coords(str(lat), str(lon))
         except exiv2.Exiv2Error:
             if verbose_mode:
-                print(" - No coordinates found")
+                print(" - No coordinates found, skipping")
             continue
 
         if verbose_mode:
             print(f" - Coordinates: {kml_lat},{kml_lon}")
+        # ...but wait! Did we somehow get pointed to the Null Island?
+        if kml_lat == 0.0 and kml_lon == 0.0:
+            if verbose_mode:
+                print(" - Coordinates are probably bogus, skipping this one")
+            continue
+        # Right! With that out of the way, we can be reasonably sure we indeed have
+        # what we need: File name, date stamp, and coordinates.
 
         # Construct the KML data
         ed = {
