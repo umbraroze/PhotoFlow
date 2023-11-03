@@ -46,15 +46,36 @@ def make_geo_timestamp(time,lat,lon):
 def parse_exif_date(date):
     return datetime.datetime.strptime(str(date),'%Y:%m:%d %H:%M:%S')
 
-def parse_exif_coords(lat,lon):
-    # there's probably a library for this, but what the heck...
-    # Note: this probably only works in North/East quadrant of the world 
-    # (lat and lon positive). Haven't got a clue what goes in the EXIF
-    # in other regions. Sorry for an Eurocentrist quick hack.
-    [(lat_deg,lat_min,lat_sec)] = re.findall(r"(\d+)deg\s+(\d+)'\s+(\d+)\"",lat)
-    [(lon_deg,lon_min,lon_sec)] = re.findall(r"(\d+)deg\s+(\d+)'\s+(\d+)\"",lon)
-    lat_d = float(lat_deg) + (float(lat_min)*(1/60)) + (float(lat_sec)*(1/60)*(1/60))
-    lon_d = float(lon_deg) + (float(lon_min)*(1/60)) + (float(lon_sec)*(1/60)*(1/60))
+def parse_exif_rational(frac):
+    [(a,b)] = re.findall(r"(\d+)/(\d+)",frac)
+    if a == "0" or b == "0":
+        return 0.0
+    return float(a)/float(b)
+
+def parse_exif_coords(lat,lon,lat_ref,lon_ref):
+    [(lat_deg_frac,lat_min_frac,lat_sec_frac)] = \
+        re.findall(r"(\d+/\d+)\s+(\d+/\d+)\s+(\d+/\d+)",str(lat))
+    lat_deg, lat_min, lat_sec = \
+        parse_exif_rational(lat_deg_frac), \
+        parse_exif_rational(lat_min_frac), \
+        parse_exif_rational(lat_sec_frac)
+    [(lon_deg_frac,lon_min_frac,lon_sec_frac)] = \
+        re.findall(r"(\d+/\d+)\s+(\d+/\d+)\s+(\d+/\d+)",str(lon))
+    lon_deg, lon_min, lon_sec = \
+        parse_exif_rational(lon_deg_frac), \
+        parse_exif_rational(lon_min_frac), \
+        parse_exif_rational(lon_sec_frac)
+
+    lat_d = float(lat_deg) + \
+        (float(lat_min)*(1/60)) + \
+        (float(lat_sec)*(1/60)*(1/60))
+    if str(lat_ref) == 'S':
+        lat_d = -lat_d
+    lon_d = float(lon_deg) + \
+        (float(lon_min)*(1/60)) + \
+        (float(lon_sec)*(1/60)*(1/60))
+    if str(lon_ref) == 'W':
+        lon_d = -lon_d
     return (lat_d,lon_d)
 
 ##########################################################################
@@ -118,9 +139,14 @@ for root, dirs, files in os.walk(input_dir):
             print(f" - Date: {date}")
 
         # Read the GPS coordinates and convert them to KML style decimal coordinates
+        # FIXME later: ok, so value() works, but what the heck was up with getValue() above???
         try:
-            lat, lon = data['Exif.GPSInfo.GPSLatitude'], data['Exif.GPSInfo.GPSLongitude']
-            kml_lat, kml_lon = parse_exif_coords(str(lat), str(lon))
+            lat, lon, lat_ref, lon_ref = \
+                data['Exif.GPSInfo.GPSLatitude'].value(), \
+                data['Exif.GPSInfo.GPSLongitude'].value(), \
+                data['Exif.GPSInfo.GPSLatitudeRef'].value(), \
+                data['Exif.GPSInfo.GPSLongitudeRef'].value()
+            kml_lat, kml_lon = parse_exif_coords(lat, lon, lat_ref, lon_ref)
         except exiv2.Exiv2Error:
             if verbose_mode:
                 print(" - No coordinates found, skipping")
