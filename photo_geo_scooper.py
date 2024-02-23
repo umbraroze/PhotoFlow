@@ -44,7 +44,10 @@ def make_geo_timestamp(time,lat,lon):
     )
 
 def parse_exif_date(date):
-    return datetime.datetime.strptime(str(date),'%Y:%m:%d %H:%M:%S')
+    try:
+        return datetime.datetime.strptime(str(date),'%Y:%m:%d %H:%M:%S')
+    except ValueError:
+        return None
 
 def parse_exif_rational(frac):
     [(a,b)] = re.findall(r"(\d+)/(\d+)",frac)
@@ -135,6 +138,10 @@ for root, dirs, files in os.walk(input_dir):
                 print(" - No date found, skipping")
             continue
         date = parse_exif_date(str(date_raw))
+        if date == None:
+            if verbose_mode:
+                print(" - Date unparseable, skipping")
+            continue
         if verbose_mode:
             print(f" - Date: {date}")
 
