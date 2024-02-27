@@ -5,6 +5,12 @@
         SevenZip = 'C:\Program Files\7-Zip\7z.exe'
         Exiv2 = 'exiv2.exe'
     }
+    Cloud = @{
+        # Relative to home directory. NOTE: OneDrive's default path may
+        # be localised, so be sure to set it up.
+        Dropbox = "Dropbox\Camera Uploads"
+        OneDrive = "OneDrive\Pictures\Camera Roll"
+    }
     Backup = "C:\Data\PhotoDump"
     Destination = "\\NAS-SERVER\photos"
     FolderStructure = '{0:yyyy}/{0:MM}/{0:dd}'

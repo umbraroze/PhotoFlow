@@ -11,9 +11,9 @@
     these utilities can be overridden in the configuration file.
 
 .PARAMETER Card
-    The SD card drive to import from (e.g. "D:"). If specified as
-    "Dropbox", will import from Dropbox "Camera Uploads" subfolder in
-    current user's home folder instead.
+    The SD card drive to import from (e.g. "D:"). If this matches one
+    of the names specified as Cloud sources, will use those folders
+    instead.
 
 .PARAMETER Camera
     Name of the camera to base the settings on.
@@ -221,14 +221,15 @@ Pause
 ############################################################
 
 # Figure out input and output destinations
-if($Card -eq "Dropbox") {
+if($settings.Cloud.ContainsKey($Card)) {
+    $cloudpath = $settings.Cloud.$Card
     Try
     {
-        $inputdir = Resolve-Path "${HOME}\Dropbox\Camera Uploads" -ErrorAction Stop
+        $inputdir = Resolve-Path "${HOME}\$cloudpath" -ErrorAction Stop
     }
     Catch
     {
-        throw "Can't find Dropbox Camera Uploads folder"
+        throw "Can't find ${Card} cloud folder ${cloudpath}"
     }        
 } else {
     Try
@@ -278,11 +279,12 @@ if($SkipImport) {
     Write-Host -ForegroundColor Yellow (([char]0x26A0)+" [Skipped] Entire import phase")
 } else {
     # Move stuff from the card to Incoming
-    # TODO: Maybe move some of this stuff into functions???
-    if($Card -eq "Dropbox") {
-        Write-Output "Dropbox folder ${inputdir}"
+    if($settings.Cloud.ContainsKey($Card)) {
+        # Just the single cloud folder
+        Write-Output (([char]0x2601+[char]0xFE0F)+" ${Card} cloud folder ${inputdir}")
         Move-ImageFolder -InFolder $inputdir -OutFolder $Destination -Ignored $settings.Cameras.$Camera.Ignore
     } else {
+        # Move from each subfolder
         Get-ChildItem $inputdir | ForEach-Object {
             $sourcefolder = Join-Path -Path $inputdir -ChildPath $_
             Write-Output "SD card DCIM subfolder ${sourcefolder}"
