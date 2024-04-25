@@ -4,6 +4,7 @@
     Tools = @{
         SevenZip = 'C:\Program Files\7-Zip\7z.exe'
         Exiv2 = 'exiv2.exe'
+        DngLab = 'dnglab.exe'
     }
     Cloud = @{
         # Relative to home directory. NOTE: OneDrive's default path may
@@ -19,6 +20,7 @@
             Card = "D:"
             CardLabel = "NIKON D780"
             Ignore = @("NC_FLLST.DAT")
+            ConvertRaw = @(".NEF")
         }
         "Nokia_5" = @{
             Card = "Dropbox"

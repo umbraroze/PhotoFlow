@@ -8,7 +8,7 @@ written primarily in PowerShell, meant to be used on Windows host.
 This PowerShell script will import images from SD card or Dropbox
 to a NAS, creating a backup archive.
 
-Requires exiv2 and 7-Zip executables.
+Requires exiv2, dnglab and 7-Zip executables.
 
 ## Geoscooper
 

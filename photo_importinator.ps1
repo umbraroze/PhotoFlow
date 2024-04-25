@@ -6,7 +6,7 @@
     This tool will perform three steps of moving photographs from SD
     cards and dropbox to NAS.
 
-    This program expects to find exiv2 on PATH, and expects
+    This program expects to find exiv2 and dnglab on PATH, and expects
     7-Zip to be installed on default location. Exact paths of
     these utilities can be overridden in the configuration file.
 
@@ -98,7 +98,7 @@ function Write-Box {
 }
 
 function Move-ImageFolder {
-    Param([string]$InFolder,[string]$OutFolder,[string[]]$Ignored)
+    Param([string]$InFolder,[string]$OutFolder,[string[]]$Ignored,[string[]]$ConvertRaw)
     $items = Get-ChildItem $InFolder
     :image foreach($_ in $items) {
         # Get the full source image path 
@@ -122,30 +122,62 @@ function Move-ImageFolder {
         # Form the full target folder and file paths
         $TargetFolder = Join-Path -Path $OutFolder -ChildPath $DateFolder
         $Target = Join-Path -Path $TargetFolder -ChildPath $_
-        # Strip the "Microsoft.PowerShell.Core\FileSystem::" part from target
-        # for display purposes.
-        # FIXME: This should actually use something like Convert-Path, but
-        # Convert-Path requires path to be resolvable.
-        $DispTarget = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Target)
         # Create the target folder if it doesn't exist
         if(-Not (Test-Path $TargetFolder)) {
             if($DryRun) {
-                Write-Host -ForegroundColor Yellow (([char]0x26A0)+" Would create a folder")
+                Write-Host -ForegroundColor Yellow (([char]0x26A0)+"  Would create a folder")
             } else {
                 $null = New-Item $TargetFolder -ItemType Directory
             }
         }
-        # Perform the actual move.
-        if(-Not (Test-Path $Target)) {
+        Move-ImageItem -Source $Source -Target $Target -ConvertRaw $ConvertRaw
+    }
+}
+
+function Move-ImageItem {
+    Param([string]$Source,[string]$Target,[string[]]$ConvertRaw)
+
+    # Check if this file should be converted.
+    $conv = $false
+    if($ConvertRaw) {
+        foreach($ext in $ConvertRaw) {
+            if([io.path]::GetExtension($Source) -ieq $ext) {
+                $Target = $Target -replace [io.path]::GetExtension($Target), '.DNG'
+                $conv = $true
+                break
+            }
+        }
+    }
+
+    # Strip the "Microsoft.PowerShell.Core\FileSystem::" part from target
+    # for display purposes.
+    # FIXME: This should actually use something like Convert-Path, but
+    # Convert-Path requires path to be resolvable.
+    $DispTarget = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Target)
+
+    # Perform the actual move.
+    if(-Not (Test-Path $Target)) {
+        if($conv) {
             if($DryRun) {
-                Write-Output ("Would move: ${Source} "+[char]0x27a1+" ${DispTarget}")
+                Write-Output ("Would convert: ${Source} "+[char]0x27a1+"  ${DispTarget}")
             } else {            
-                Write-Output ("${Source} "+[char]0x27a1+" ${DispTarget}")
-                Move-Item $Source $Target
+                Write-Output ("Converting: ${Source} "+[char]0x27a1+"  ${DispTarget}")
+                & $dnglab convert $Source $Target
+                if(!$?) {
+                    throw "dnglab process returned an error"
+                }        
+                Remove-Item $Source
             }
         } else {
-            Write-Host -ForegroundColor Yellow ("${Source} "+[char]0x274e+" ${DispTarget} [Already exists]")
+            if($DryRun) {
+                Write-Output ("Would move: ${Source} "+[char]0x27a1+"  ${DispTarget}")
+            } else {            
+                Write-Output ("${Source} "+[char]0x27a1+"  ${DispTarget}")
+                Move-Item $Source $Target
+            }
         }
+    } else {
+        Write-Host -ForegroundColor Yellow ("${Source} "+[char]0x274e+"  ${DispTarget} [Already exists]")
     }
 }
 
@@ -157,6 +189,7 @@ function Move-ImageFolder {
 # config file if needed.
 $7zip = "${env:ProgramFiles}\7-Zip\7z.exe" # Default install location
 $exiv2 = "exiv2.exe" # Assumed to be on path somewhere
+$dnglab = "dnglab.exe" # Assumed to be on path somewhere
 
 # Read the settings.
 $settings = Import-PowerShellDataFile $SettingsFile -ErrorAction Stop
@@ -166,6 +199,7 @@ if(-Not $settings.Cameras.$Camera) {
 }
 if($settings.Tools.SevenZip) { $7zip = $settings.Tools.SevenZip }
 if($settings.Tools.Exiv2) { $exiv2 = $settings.Tools.Exiv2 }
+if($settings.Tools.DngLab) { $dnglab = $settings.Tools.DngLab }
 if(-Not $Backup) {
     if($settings.Cameras.$Camera.Backup) {
         $Backup = $settings.Cameras.$Camera.Backup
@@ -249,7 +283,7 @@ if($settings.Cloud.ContainsKey($Card)) {
 # Backup the card contents
 Write-Line
 if($SkipBackup) {
-    Write-Host -ForegroundColor Yellow (([char]0x26A0)+" [Skipped] Entire backup phase")
+    Write-Host -ForegroundColor Yellow (([char]0x26A0)+"  [Skipped] Entire backup phase")
 } else {
     Try
     {
@@ -264,7 +298,7 @@ if($SkipBackup) {
     Write-Output "Output archive: ${archive}"
 
     if($DryRun) {
-        Write-Host -ForegroundColor Yellow (([char]0x26A0)+" [Skipped] ${7zip} a -t7z -r ${archive} ${inputdir}")
+        Write-Host -ForegroundColor Yellow (([char]0x26A0)+"  [Skipped] ${7zip} a -t7z -r ${archive} ${inputdir}")
     } else {
         & $7zip a -t7z -r $archive $inputdir 
         if(!$?) {
@@ -276,19 +310,19 @@ if($SkipBackup) {
 # Move the photos to the Incoming folder, and from there to the desired folder structure.
 Write-Line
 if($SkipImport) {
-    Write-Host -ForegroundColor Yellow (([char]0x26A0)+" [Skipped] Entire import phase")
+    Write-Host -ForegroundColor Yellow (([char]0x26A0)+"  [Skipped] Entire import phase")
 } else {
     # Move stuff from the card to Incoming
     if($settings.Cloud.ContainsKey($Card)) {
         # Just the single cloud folder
-        Write-Output (([char]0x2601+[char]0xFE0F)+" ${Card} cloud folder ${inputdir}")
-        Move-ImageFolder -InFolder $inputdir -OutFolder $Destination -Ignored $settings.Cameras.$Camera.Ignore
+        Write-Output (([char]0x2601+[char]0xFE0F)+"  ${Card} cloud folder ${inputdir}")
+        Move-ImageFolder -InFolder $inputdir -OutFolder $Destination -Ignored $settings.Cameras.$Camera.Ignore -ConvertRaw $settings.Cameras.$Camera.ConvertRaw
     } else {
         # Move from each subfolder
         Get-ChildItem $inputdir | ForEach-Object {
             $sourcefolder = Join-Path -Path $inputdir -ChildPath $_
             Write-Output "SD card DCIM subfolder ${sourcefolder}"
-            Move-ImageFolder -InFolder $sourcefolder -OutFolder $Destination -Ignored $settings.Cameras.$Camera.Ignore
+            Move-ImageFolder -InFolder $sourcefolder -OutFolder $Destination -Ignored $settings.Cameras.$Camera.Ignore -ConvertRaw $settings.Cameras.$Camera.ConvertRaw
         }
     }
 }
