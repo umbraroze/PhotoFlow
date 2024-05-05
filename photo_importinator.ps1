@@ -98,7 +98,7 @@ function Write-Box {
 }
 
 function Move-ImageFolder {
-    Param([string]$InFolder,[string]$OutFolder,[string[]]$Ignored,[string[]]$ConvertRaw)
+    Param([string]$InFolder,[string]$OutFolder)
     $items = Get-ChildItem $InFolder
     :image foreach($_ in $items) {
         # Get the full source image path 
@@ -130,12 +130,25 @@ function Move-ImageFolder {
                 $null = New-Item $TargetFolder -ItemType Directory
             }
         }
-        Move-ImageItem -Source $Source -Target $Target -ConvertRaw $ConvertRaw
+        Move-ImageItem -Source $Source -Target $Target
     }
 }
 
+# Get plain path.
+# 
+# Will strip the "Microsoft.PowerShell.Core\FileSystem::" part from target
+# for display purposes.
+#
+# FIXME: This should actually use something like Convert-Path, but
+# Convert-Path apparently requires path to be resolvable at the moment.
+function Get-PlainPath {
+    Param($Path)
+    return $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Path)
+}
+
+# Move (or convert) individual image.
 function Move-ImageItem {
-    Param([string]$Source,[string]$Target,[string[]]$ConvertRaw)
+    Param([string]$Source,[string]$Target)
 
     # Check if this file should be converted.
     $conv = $false
@@ -149,11 +162,7 @@ function Move-ImageItem {
         }
     }
 
-    # Strip the "Microsoft.PowerShell.Core\FileSystem::" part from target
-    # for display purposes.
-    # FIXME: This should actually use something like Convert-Path, but
-    # Convert-Path requires path to be resolvable.
-    $DispTarget = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Target)
+    $DispTarget = Get-PlainPath($Target)
 
     # Perform the actual move.
     if(-Not (Test-Path $Target)) {
@@ -225,6 +234,9 @@ $ExampleDestination = Join-Path -Path $Destination -ChildPath ($FolderStructure 
 if((-Not $Card) -and $settings.Cameras.$Camera.Card) {
     $Card = $settings.Cameras.$Camera.Card
 }
+
+$Ignored = $settings.Cameras.$Camera.Ignore
+$ConvertRaw = $settings.Cameras.$Camera.ConvertRaw
 
 # Print out the banner and the final configuration details.
 Write-Box "PHOTO IMPORTINATOR"
