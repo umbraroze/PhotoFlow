@@ -127,7 +127,7 @@ function Move-ImageFolder {
             if($DryRun) {
                 Write-Host -ForegroundColor Yellow (([char]0x26A0)+"  Would create a folder")
             } else {
-                $null = New-Item $TargetFolder -ItemType Directory
+                $null = New-Item $TargetFolder -ItemType Directory -ErrorAction Stop
             }
         }
         Move-ImageItem -Source $Source -Target $Target
@@ -171,10 +171,20 @@ function Move-ImageItem {
                 Write-Output ("Would convert: ${Source} "+[char]0x27a1+"  ${DispTarget}")
             } else {            
                 Write-Output ("Converting: ${Source} "+[char]0x27a1+"  ${DispTarget}")
-                & $dnglab convert $Source $Target
+                $o = & $dnglab convert $Source $Target
+                # DNGLab will return a non-zero value if something goes horribly wrong.
+                # It *may* return success sometimes if nothing actually happened.
+                # Let's be nitpicky.
                 if(!$?) {
                     throw "dnglab process returned an error"
-                }        
+                }
+                if(-Not ($o -match "Converted 1/1 files")) {
+                    Write-Error "dnglab unable to convert a file, details:"
+                    Write-Error $o
+                    throw "dnglab process unable to convert file"
+                } else {
+                    Write-Output $o
+                }
                 Remove-Item $Source
             }
         } else {
