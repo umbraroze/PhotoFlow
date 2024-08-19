@@ -6,6 +6,7 @@
         Exiv2 = 'exiv2.exe'
         DngLab = 'dnglab.exe'
     }
+    DngLabConvertFlags = @("--dng-thumbnail","false")
     Cloud = @{
         # Relative to home directory. NOTE: OneDrive's default path may
         # be localised, so be sure to set it up.

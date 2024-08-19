@@ -146,6 +146,27 @@ function Get-PlainPath {
     return $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Path)
 }
 
+# Perform the conversion.
+function Convert-Image {
+    Param([string]$Source,[string]$Target)
+
+    $o = & $dnglab convert $dnglabconvertflags $Source $Target
+    # DNGLab will return a non-zero value if something goes horribly wrong.
+    # It *may* return success sometimes if nothing actually happened.
+    # Let's be nitpicky.
+    if(!$?) {
+        throw "dnglab process returned an error"
+    }
+    if(-Not ($o -match "Converted 1/1 files")) {
+        Write-Error "dnglab unable to convert a file, details:"
+        Write-Error $o
+        throw "dnglab process unable to convert file"
+    } else {
+        ## TODO: Verbose flag?
+        # Write-Output $o
+    }
+}
+
 # Move (or convert) individual image.
 function Move-ImageItem {
     Param([string]$Source,[string]$Target)
@@ -171,20 +192,7 @@ function Move-ImageItem {
                 Write-Output ("Would convert: ${Source} "+[char]0x27a1+"  ${DispTarget}")
             } else {            
                 Write-Output ("Converting: ${Source} "+[char]0x27a1+"  ${DispTarget}")
-                $o = & $dnglab convert $Source $Target
-                # DNGLab will return a non-zero value if something goes horribly wrong.
-                # It *may* return success sometimes if nothing actually happened.
-                # Let's be nitpicky.
-                if(!$?) {
-                    throw "dnglab process returned an error"
-                }
-                if(-Not ($o -match "Converted 1/1 files")) {
-                    Write-Error "dnglab unable to convert a file, details:"
-                    Write-Error $o
-                    throw "dnglab process unable to convert file"
-                } else {
-                    Write-Output $o
-                }
+                Convert-Image $Source $Target
                 Remove-Item $Source
             }
         } else {
@@ -219,6 +227,8 @@ if(-Not $settings.Cameras.$Camera) {
 if($settings.Tools.SevenZip) { $7zip = $settings.Tools.SevenZip }
 if($settings.Tools.Exiv2) { $exiv2 = $settings.Tools.Exiv2 }
 if($settings.Tools.DngLab) { $dnglab = $settings.Tools.DngLab }
+$dnglabconvertflags = @()
+if($settings.DngLabConvertFlags) { $dnglabconvertflags = $settings.Tools.DngLabConvertFlags }
 if(-Not $Backup) {
     if($settings.Cameras.$Camera.Backup) {
         $Backup = $settings.Cameras.$Camera.Backup
