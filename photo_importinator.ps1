@@ -150,11 +150,14 @@ function Get-PlainPath {
 function Convert-Image {
     Param([string]$Source,[string]$Target)
 
-    $o = & $dnglab convert $dnglabconvertflags $Source $Target
+    $o = & $dnglab convert $dnglabconvertflags $Source $Target 2>&1
     # DNGLab will return a non-zero value if something goes horribly wrong.
     # It *may* return success sometimes if nothing actually happened.
     # Let's be nitpicky.
-    if(!$?) {
+    # FIXME: Janky.
+    if(!$? -and (-Not ($o -match "Converted 1/1 files"))) {
+        Write-Error "dnglab process returned an error, details:"
+        Write-Error (-join $o)
         throw "dnglab process returned an error"
     }
     if(-Not ($o -match "Converted 1/1 files")) {
