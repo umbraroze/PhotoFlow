@@ -20,7 +20,14 @@ Python script that will read the geotags from all of the images
 in a given directory and will spit out a KML file suitable for
 visualising in GIS software of your choice.
 
-Requires `exiv2`and `pykml` packages via PIP.
+Requires `exiv2`, `pykml` and `diskcache` packages via PIP.
+
+## Upcoming
+
+* Maybe need a script for helping sorting through "daily photo challenge"
+  stuff.
+* Some kind of tool for automatically making calendars of "photos from
+  these days have been tagged with locations and put on map"
 
 ## Other scripts
 
