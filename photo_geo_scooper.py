@@ -191,20 +191,26 @@ for root, dirs, files in os.walk(input_dir):
         # Read the exif data (via cache possibly)
         if caching:
             # Yes we do caching and yes this gets complicated
-            cdata = None
             try:
-                c = cache[fqfile]
+                cdata = pickle.loads(cache[fqfile])
             except KeyError:
-                c = None
-            if c != None:
-                cdata = pickle.loads(c)
+                cdata = None
             if cdata == None or mtime > cdata['mtime']:
                 # Cache doesn't exist or is too old.
                 # Come up with brand new data and cache it.
                 try:
                     date, kml_lat, kml_lon = read_exif(fqfile)
                 except SkippedFileException:
+                    # If no sufficient data, save anyway
+                    cdata = dict()
+                    cdata['mtime'] = mtime
+                    cdata['date'] = None
+                    cdata['kml_lat'] = None
+                    cdata['kml_lon'] = None
+                    cache[fqfile] = pickle.dumps(cdata)
+                    # And off we go to the next file then
                     continue
+                # OK, here's the regular data
                 cdata = dict()
                 cdata['mtime'] = mtime
                 cdata['date'] = date
@@ -219,6 +225,12 @@ for root, dirs, files in os.walk(input_dir):
                 date = cdata['date']
                 kml_lat = cdata['kml_lat']
                 kml_lon = cdata['kml_lon']
+                if date == None:
+                    # Well there's no data for this then
+                    if verbose_mode:
+                        print(" - No coordinates found, skipping")
+                    continue
+
         else:
             # No caching magic, just read the damn thing
             try:
