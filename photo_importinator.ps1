@@ -231,7 +231,7 @@ if($settings.Tools.SevenZip) { $7zip = $settings.Tools.SevenZip }
 if($settings.Tools.Exiv2) { $exiv2 = $settings.Tools.Exiv2 }
 if($settings.Tools.DngLab) { $dnglab = $settings.Tools.DngLab }
 $dnglabconvertflags = @()
-if($settings.DngLabConvertFlags) { $dnglabconvertflags = $settings.Tools.DngLabConvertFlags }
+if($settings.DngLabConvertFlags) { $dnglabconvertflags = $settings.DngLabConvertFlags }
 if(-Not $Backup) {
     if($settings.Cameras.$Camera.Backup) {
         $Backup = $settings.Cameras.$Camera.Backup
