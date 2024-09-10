@@ -11,6 +11,7 @@ import datetime
 import tomllib
 # https://docs.python.org/3/library/argparse.html
 import argparse
+from dataclasses import dataclass
 
 # PyPi modules
 import exiv2
@@ -42,12 +43,13 @@ class CLIOptions:
 
 class Configuration:
     """Photo Importinator's configuration."""
+    @dataclass
     class Camera:
         """Configuration for camera specific details."""
-        card = None
-        card_label = None
-        ignore = None
-        convert_raw = None
+        card: str
+        card_label: str
+        ignore: list[str]
+        convert_raw: list[str]
 
 
 ###### Photo processing task #############################################
