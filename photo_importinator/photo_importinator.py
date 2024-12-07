@@ -28,6 +28,13 @@ def main() -> int:
     # So here we are now.
     print(configuration)
 
+    print(f"Settings file: {configuration.configuration_file}")
+    print("Settings:")
+    print(f"Camera:        {configuration.camera}")
+    print(f"Card:          {configuration.card}")
+    print(f"Backup folder: {configuration.backup_path}")
+    print(f"Destination:   {configuration.date_to_path_demo()}")
+
     return 0
 
 if __name__ == '__main__':

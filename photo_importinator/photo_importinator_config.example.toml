@@ -7,14 +7,14 @@
 
 [Backup]
 7zip_path = 'C:/Program Files/7-Zip/7z.exe'
-path = 'C:/Data/PhotoDump'
 
 [Target]
 default = 'NAS-SERVER'
 
 [Target.NAS-SERVER]
-path = '\\NAS-SERVER\photos'
-folder_structure = '{0:yyyy}/{0:MM}/{0:dd}'
+path = '//NAS-SERVER/photos'
+backup_path = 'C:/Data/PhotoDump'
+folder_structure = '{year:04d}/{month:02d}/{day:02d}'
 
 [Conversion]
 dnglab_path = 'dnglab.exe'
