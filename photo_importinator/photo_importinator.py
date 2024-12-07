@@ -3,26 +3,30 @@
 # Photo Importinator III: This Time It's Python For Some Reason
 #
 
-# Built-in modules
-import os, sys
-import re
-
 # https://pypi.org/project/colorama/
 import colorama
 
-from configuration import CLIOptions
+from configuration import Configuration
 
 ###### Main program ######################################################
 
+configuration: Configuration = None
+
 def main() -> int:
     """Photo Importinator main program."""
+    global configuration
     
     # Initialise Colorama
     colorama.just_fix_windows_console()
     
-    # Parse arguments
-    opts = CLIOptions.getopt()
-    #print(opts)
+    # Parse command line options and configuration file, do all of the
+    # necessary sanity checks as you go.
+    configuration = Configuration()
+    configuration.parse()
+    configuration.validate()
+
+    # So here we are now.
+    print(configuration)
 
     return 0
 
