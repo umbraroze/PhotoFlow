@@ -1,0 +1,44 @@
+# This is an example of a configuration file for photo_importinator.py script.
+# Rename this to "photo_importinator_config.toml".
+# Put this in whatever folder the program tells you to put it in when you
+# run "photo_importinator.py -h" -- or, alternatively, specify it on command
+# line with the -C or --configuration-file argument.
+
+[Backup]
+7zip_path = 'C:/Program Files/7-Zip/7z.exe'
+path = 'C:/Data/PhotoDump'
+
+[Target]
+default = 'NAS-SERVER'
+
+[Target.NAS-SERVER]
+path = '\\NAS-SERVER\photos'
+folder_structure = '{0:yyyy}/{0:MM}/{0:dd}'
+
+[Target.WOLFMEDIA]
+path = '\\WOLFMEDIA\photo'
+folder_structure = '{0:yyyy}/{0:MM}/{0:dd}'
+
+[Conversion]
+dnglab_path = 'dnglab.exe'
+convert_flags = ['--dng-thumbnail', 'false']
+
+[Cloud]
+# Relative to home directory. NOTE: OneDrive's default path may
+# be localised, so be sure to set it up.
+Dropbox = 'Dropbox/Camera Uploads'
+OneDrive = 'OneDrive/Pictures/Camera Roll'
+
+[Cameras]
+# Default can be set to "None" if you want to always explicity
+# specify the camera (which should be a good practice).
+default = 'None'
+
+[Cameras.Nikon_D780]
+card = 'D:'
+card_label = 'NIKON D780'
+ignore = [ 'NC_FLLST.DAT' ]
+convert_raw = [ '.NEF' ]
+
+[Cameras.Nokia]
+card = 'OneDrive'

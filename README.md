@@ -5,14 +5,11 @@ written primarily in PowerShell, meant to be used on Windows host.
 
 ## Photo Importinator
 
-This PowerShell script will import images from SD card or locally auto-synced cloud drive
-(Dropbox, OneDrive, etc)
-to a NAS, and creating a backup archive.
+(See the [`photo_importinator`](photo_importinator/) subdirectory)
 
-Requires
-[exiv2](https://exiv2.org/),
-[dnglab](https://github.com/dnglab/dnglab) and
-[7-Zip](https://www.7-zip.org/) executables.
+This script will import images to a NAS, creating a backup archive.
+The aim is to minimise the user hassle: usually, you only need to
+specify the camera you're using, and the script will do the rest.
 
 ## Geoscooper
 

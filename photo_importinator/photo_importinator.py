@@ -6,62 +6,11 @@
 # Built-in modules
 import os, sys
 import re
-import datetime
-# https://docs.python.org/3/library/tomllib.html
-import tomllib
-# https://docs.python.org/3/library/argparse.html
-import argparse
-from dataclasses import dataclass
 
-# PyPi modules
-import exiv2
 # https://pypi.org/project/colorama/
 import colorama
 
-###### Configuration #####################################################
-class CLIOptions:
-    """Parses script command line arguments for Photo Importinator."""
-    @staticmethod
-    def getopt():
-        parser = argparse.ArgumentParser(
-            prog='photo_importinator',
-            description='Move or convert photos from SD card or cloud to your photo server.')
-        # Target and destination specifications
-        parser.add_argument('-T','--target',default=None,help="Specify target device (default: as set in config)")
-        parser.add_argument('-c','--card',help='Card path/device (default: as per camera settings in config)')
-        parser.add_argument('--date',
-                            type=lambda d: datetime.datetime.strptime(d, '%Y-%m-%d').date(),
-                            default=datetime.date.today(),
-                            help="Archive date stamp, YYYY-mm-dd (default: current date)")
-        # Skipping switches
-        parser.add_argument('--skip-backup',action='store_true',help="Skip backup phase")
-        parser.add_argument('--skip-import',action='store_true',help="Skip the final import phase")
-        parser.add_argument('--dry-run',action='store_true',help="Just look at files, do not actually do anything")
-        # Camera
-        parser.add_argument('camera',default=None,nargs='?',help="Camera name.")
-        args = parser.parse_args()
-
-class Configuration:
-    """Photo Importinator's configuration."""
-    @dataclass
-    class Camera:
-        """Configuration for camera specific details."""
-        card: str
-        card_label: str
-        ignore: list[str]
-        convert_raw: list[str]
-
-
-###### Photo processing task #############################################
-
-class TargetDirectory:
-    """Target directory. Tracks the date stamp for stats purposes."""
-    pass
-
-class PhotoProcessTask:
-    """Task representing image moving or conversion. Keeps track of the
-    state of the process and stats."""
-    pass
+from configuration import CLIOptions
 
 ###### Main program ######################################################
 
@@ -72,7 +21,8 @@ def main() -> int:
     colorama.just_fix_windows_console()
     
     # Parse arguments
-    CLIOptions.getopt()
+    opts = CLIOptions.getopt()
+    #print(opts)
 
     return 0
 
