@@ -1,4 +1,5 @@
 # This is an example of a configuration file for photo_importinator.py script.
+#
 # Rename this to "photo_importinator_config.toml".
 # Put this in whatever folder the program tells you to put it in when you
 # run "photo_importinator.py -h" -- or, alternatively, specify it on command
@@ -13,10 +14,6 @@ default = 'NAS-SERVER'
 
 [Target.NAS-SERVER]
 path = '\\NAS-SERVER\photos'
-folder_structure = '{0:yyyy}/{0:MM}/{0:dd}'
-
-[Target.WOLFMEDIA]
-path = '\\WOLFMEDIA\photo'
 folder_structure = '{0:yyyy}/{0:MM}/{0:dd}'
 
 [Conversion]
