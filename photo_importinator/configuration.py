@@ -13,6 +13,7 @@ from dataclasses import dataclass
 class Configuration:
     """Photo Importinator's configuration."""
 
+    _config: dict = None
     configuration_file: Path = None
     target: str = None
     card: str = None
@@ -23,6 +24,7 @@ class Configuration:
     dry_run: bool = False
     leave_originals: bool = False
     camera: str = None
+    source_path: Path = None
     target_path: Path = None
     folder_structure: str = None
     ignore: list[str] = None
@@ -34,6 +36,8 @@ class Configuration:
         settings."""
         # TODO: Other conditions here
         if self.camera == None:
+            return False
+        if self.source_path == None:
             return False
         if self.target_path == None:
             return False
@@ -108,25 +112,33 @@ class Configuration:
         if not os.path.exists(self.configuration_file):
             sys.exit(f"Configuration file {self.configuration_file} does not exist.")
         with open(self.configuration_file,'rb') as f:
-            conf_file = tomllib.load(f)
+            self._config = tomllib.load(f)
         if self.target == None:
             try:
-                self.target = conf_file['Target']['default']
+                self.target = self._config['Target']['default']
             except KeyError:
                 sys.exit("Target was not specified on the command line, and no default target is set in the configuration file.")
         if self.target == None:
             sys.exit("Target isn't known.")
-        if self.target not in conf_file['Target']:
+        if self.target not in self._config['Target']:
             sys.exit(f"Target {self.target} not specified in the configuration file.")
-        self.target_path = Path(conf_file['Target'][self.target]['path'])
-        self.folder_structure = conf_file['Target'][self.target]['folder_structure']
-        if self.camera == None and ('default' not in conf_file['Cameras'] or conf_file['Cameras']['default'] == 'None'):
+        try:
+            self.target_path = Path(self._config['Target'][self.target]['path'])
+        except KeyError:
+            sys.exit(f"Target {self.target} doesn't specify the destination path.")
+        try:
+            self.folder_structure = self._config['Target'][self.target]['folder_structure']
+        except KeyError:
+            sys.exit(f"Target {self.target} doesn't specify folder structure.")
+        if self.camera == None and ('default' not in self._config['Cameras'] or self._config['Cameras']['default'] == 'None'):
             sys.exit("Camera was not specified on the command line, and no default camera is set in the configuration file.")
-        if self.camera not in conf_file['Cameras']:
+        if self.camera not in self._config['Cameras']:
             sys.exit(f"Camera {self.camera} not specified in the configuration file.")
-        camera_details = conf_file['Cameras'][self.camera]
+        camera_details = self._config['Cameras'][self.camera]
         if self.card == None and 'card' in camera_details:
             self.card = camera_details['card']
+        if self.card == None:
+            sys.exit(f"Camera {self.camera} has no default card and no card has been specified.")
         if 'card_label' in camera_details:
             self.card_label = camera_details['card_label']
         if 'ignore' in camera_details:
@@ -134,15 +146,37 @@ class Configuration:
         if 'convert_raw' in camera_details:
             self.convert_raw = camera_details['convert_raw']
         try:
-            self.backup_path = Path(conf_file['Target'][self.target]['backup_path'])
+            self.backup_path = Path(self._config['Target'][self.target]['backup_path'])
         except KeyError:
             sys.exit("Backup path not specified for target {self.target} in the configuration file.")
+
+    def find_source_path_card(self):
+        raise RuntimeError("Unimplemented")
+
+    def find_source_path_cloud(self):
+        cloud_path = Path(self._config['Cloud'][self.card])
+        # Is it a path relative to home?
+        if os.path.exists(Path.home() / cloud_path):
+            self.source_path = Path.home() / cloud_path
+        # Maybe it's an absolute path or relative to working directory?
+        elif os.path.exists(cloud_path):
+            self.source_path = cloud_path
+        # Otherwise, I don't know what it is
+        else:
+            sys.exit(f"The local sync folder of cloud service {self.card}, located at {cloud_path}, cannot be found.")
+
+    def find_source_path(self):
+        if self.card in self._config['Cloud']:
+            self.find_source_path_cloud()    
+        else:
+            self.find_source_path_card()
 
     def parse(self):
         """Read configuration. Do all of the relevant steps to ensure
         configuration is set correctly for the actual processing."""
         self.parse_command_line()
         self.parse_config_file()
+        self.find_source_path()
 
     def validate(self):
         if not self.is_valid_config():
