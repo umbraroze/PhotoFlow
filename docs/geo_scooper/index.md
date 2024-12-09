@@ -6,6 +6,12 @@ permalink: /geo_scooper/
 
 # Photo Geo Scooper
 
+* Distributed under MIT license.
+* [See code in GitHub](https://github.com/umbraroze/PhotoFlow/tree/master/geo_scooper).
+* There's no official release package of this script because it's just
+  the script and the PIP requirements file - you can check out the
+  repository or just download the individual files off the GitHub web view.
+
 ## Overview
 
 Ever fancied seeing *exactly where* you have been strolling

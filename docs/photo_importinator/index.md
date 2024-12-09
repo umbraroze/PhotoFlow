@@ -10,6 +10,12 @@ permalink: /photo_importinator/
 This is suprisingly tricky and none of the apps I tried did it right!  
 ...So I wrote my own, dang it!*
 
+* Distributed under MIT license.
+* [See code in GitHub](https://github.com/umbraroze/PhotoFlow/tree/master/photo_importinator).
+* Complete rewrite in Python is underway; no official release as of yet.
+* [Final "stable" PowerShell version](https://github.com/umbraroze/PhotoFlow/releases/tag/photoflow-powershell-final)
+  is still available for download.
+
 ## Overview
 
 > "What mighty contests rise from trivial things."  
