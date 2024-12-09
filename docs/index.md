@@ -16,5 +16,8 @@ rewriting Photo Importinator in Python!
 
 * **[Photo Importinator](photo_importinator/)** - My strangely
   flexible photo import script.
-* **GeoScooper**
-* Other scripts
+* **[Photo Geo Scooper](geo_scooper/)** - Put your
+  photography journeys on the map! Reads any given directory
+  with photos, extracts coordinates, and puts them in a KML
+  file.
+* Other scripts (documentation forthcoming)

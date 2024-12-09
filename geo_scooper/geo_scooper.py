@@ -2,16 +2,8 @@
 ##########################################################################
 #
 # Photo Geo Scooper
-# (c) Rose Midford 2023
+# (c) Rose Midford 2023,2024
 # See LICENSE for terms of distribution
-#
-# This will walk your photo directory, grab photo metadata, and spit out
-# a KML file containing coordinates of all photos you've taken. You can
-# then stick this KML file in any map visualisation tool you like.
-#
-# To install the required libraries:
-#
-#   $ pip install exiv2 pykml diskcache
 #
 ##########################################################################
 
