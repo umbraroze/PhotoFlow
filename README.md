@@ -1,7 +1,10 @@
 # My photography workflow scripts
 
-This repository contains my photography workflow automation scripts,
-written primarily in PowerShell, meant to be used on Windows host.
+This repository contains my photography workflow automation scripts.
+
+Many of the scripts were written for my personal use and are written
+with Windows in mind, but some of them could possibly work on other
+OSes.
 
 ## Photo Importinator
 
@@ -11,13 +14,13 @@ This script will import images to a NAS, creating a backup archive.
 The aim is to minimise the user hassle: usually, you only need to
 specify the camera you're using, and the script will do the rest.
 
-## Geoscooper
+## Geo Scooper
+
+(See the [`geo_scooper`](geo_scooper/) subdirectory)
 
 Python script that will read the geotags from all of the images
 in a given directory and will spit out a KML file suitable for
 visualising in GIS software of your choice.
-
-Requires `exiv2`, `pykml` and `diskcache` packages via PIP.
 
 ## Upcoming
 
