@@ -4,6 +4,7 @@ import re
 import argparse
 import datetime
 import tomllib
+from enum import Enum
 from pathlib import Path
 from dataclasses import dataclass
 
@@ -13,6 +14,11 @@ from dataclasses import dataclass
 class Configuration:
     """Photo Importinator's configuration."""
 
+    class Action(Enum):
+        IMPORT = 0
+        LIST_CAMERAS_AND_TARGETS = 1
+
+    action: Action = Action.IMPORT
     _config: dict = None
     configuration_file: Path = None
     target: str = None
@@ -35,15 +41,15 @@ class Configuration:
         """Returns true if the current configuration contains no problematic
         settings."""
         # TODO: Other conditions here
-        if self.camera == None:
+        if self.camera is None:
             return False
-        if self.source_path == None:
+        if self.source_path is None:
             return False
-        if self.target_path == None:
+        if self.target_path is None:
             return False
-        if self.folder_structure == None:
+        if self.folder_structure is None:
             return False
-        if self.backup_path == None:
+        if self.backup_path is None:
             return False
         return True
 
@@ -62,12 +68,12 @@ class Configuration:
         return self.date.date.strftime('%Y-%m-%d')
     def date_to_path(self,date:datetime) -> Path:
         """Returns the directory structure for the given day."""
-        d = date.date
+        d = date.date()
         return Path(self.folder_structure.format(year=d.year,month=d.month,day=d.day))
     def date_to_path_demo(self) -> Path:
         """Returns the target path, with date fields substituted with
         YYYY-MM-DD for demonstration purposes."""
-        # Chop of the f-string formatting directives, just leaving the variable names
+        # Chop off the f-string formatting directives, just leaving the variable names
         m = re.sub(pattern=r'\{(.*?):(.*?)\}',repl=r'{\1}', string=self.folder_structure)
         return self.target_path / Path(m.format(year='YYYY',month='MM',day='DD'))
 
@@ -104,6 +110,8 @@ class Configuration:
         self.dry_run=args.dry_run
         self.leave_originals=args.leave_originals
         self.camera=args.camera
+        if args.camera is not None and args.camera.lower() == 'list':
+            self.action = Configuration.Action.LIST_CAMERAS_AND_TARGETS
 
     def parse_config_file(self):
         """Reads and parses the configuration file, setting the relevant
@@ -113,12 +121,17 @@ class Configuration:
             sys.exit(f"Configuration file {self.configuration_file} does not exist.")
         with open(self.configuration_file,'rb') as f:
             self._config = tomllib.load(f)
-        if self.target == None:
+        if self.action == Configuration.Action.LIST_CAMERAS_AND_TARGETS:
+            self.list_cameras_and_targets()
+            sys.exit(0)
+        if self.target is None:
             try:
                 self.target = self._config['Target']['default']
+                if self.target == 'None':
+                    self.target = None
             except KeyError:
                 sys.exit("Target was not specified on the command line, and no default target is set in the configuration file.")
-        if self.target == None:
+        if self.target is None:
             sys.exit("Target isn't known.")
         if self.target not in self._config['Target']:
             sys.exit(f"Target {self.target} not specified in the configuration file.")
@@ -130,14 +143,14 @@ class Configuration:
             self.folder_structure = self._config['Target'][self.target]['folder_structure']
         except KeyError:
             sys.exit(f"Target {self.target} doesn't specify folder structure.")
-        if self.camera == None and ('default' not in self._config['Cameras'] or self._config['Cameras']['default'] == 'None'):
+        if self.camera is None and ('default' not in self._config['Cameras'] or self._config['Cameras']['default'] == 'None'):
             sys.exit("Camera was not specified on the command line, and no default camera is set in the configuration file.")
         if self.camera not in self._config['Cameras']:
             sys.exit(f"Camera {self.camera} not specified in the configuration file.")
         camera_details = self._config['Cameras'][self.camera]
-        if self.card == None and 'card' in camera_details:
+        if self.card is None and 'card' in camera_details:
             self.card = camera_details['card']
-        if self.card == None:
+        if self.card is None:
             sys.exit(f"Camera {self.camera} has no default card and no card has been specified.")
         if 'card_label' in camera_details:
             self.card_label = camera_details['card_label']
@@ -163,13 +176,25 @@ class Configuration:
             self.source_path = cloud_path
         # Otherwise, I don't know what it is
         else:
-            sys.exit(f"The local sync folder of cloud service {self.card}, located at {cloud_path}, cannot be found.")
+            print(f"The local sync folder of cloud service {self.card}, located at {cloud_path}, cannot be found.")
+            sys.exit(1)
+
+    def is_cloud_source(self):
+        return (self.card in self._config['Cloud'])
 
     def find_source_path(self):
-        if self.card in self._config['Cloud']:
+        if self.is_cloud_source():
             self.find_source_path_cloud()    
         else:
             self.find_source_path_card()
+
+    def get_source_folders(self) -> list:
+        if self.is_cloud_source():
+            src = [self.source_path]
+        else:
+            print("get_source_folders unimplemented for cards")
+            sys.exit(1)
+        return src
 
     def parse(self):
         """Read configuration. Do all of the relevant steps to ensure
@@ -181,3 +206,33 @@ class Configuration:
     def validate(self):
         if not self.is_valid_config():
             sys.exit("Configuration is not valid")
+
+    def list_cameras_and_targets(self):
+        """Prints out valid cameras and targets. Only requres configuration
+        file to be parsed."""
+        try:
+            default_camera = self._config['Cameras']['default']
+        except KeyError:
+            default_camera = 'None'
+        try:
+            default_target = self._config['Target']['default']
+        except KeyError:
+            default_target = 'None'
+        print("\nCameras:")
+        for c in self._config['Cameras']:
+            if c != 'default':
+                if c == default_camera:
+                    print(f" - {c} (default)")
+                else:
+                    print(f" - {c}")
+        if default_camera == 'None':
+            print("   No default camera specified.")
+        print("\nTargets:")
+        for t in self._config['Target']:
+            if t != 'default':
+                if t == default_target:
+                    print(f" - {t} (default)")
+                else:
+                    print(f" - {t}")
+        if default_target == 'None':
+            print("   No default target specified.")

@@ -7,14 +7,12 @@ import colorama
 
 from configuration import Configuration
 from dazzle import *
+from photo_processing import *
 
 ###### Main program ######################################################
 
-configuration: Configuration = None
-
 def main() -> int:
     """Photo Importinator main program."""
-    global configuration
     
     # Initialise Colorama
     colorama.just_fix_windows_console()
@@ -44,6 +42,12 @@ def main() -> int:
     except KeyboardInterrupt:
         print("\nImport cancelled.")
         return 1
+
+    print(f"File A {ICON_TO}  File B. {ICON_SKIP}  Skipped. {ICON_WARN}  Warning. {ICON_CLOUD}  Cloud.")
+
+    queue = ImportQueue(configuration)
+    queue.populate()
+    queue.print_status()
 
     return 0
 
