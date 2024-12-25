@@ -94,12 +94,12 @@ def read_exif(file):
     #for k in data:
     #    print(k)
     date_raw = data["Exif.Photo.DateTimeOriginal"].getValue()
-    if date_raw == None:
+    if date_raw is None:
         if verbose_mode:
             print(" - No date found, skipping")
         raise SkippedFileException
     date = parse_exif_date(str(date_raw))
-    if date == None:
+    if date is None:
         if verbose_mode:
             print(" - Date unparseable, skipping")
         raise SkippedFileException
@@ -151,7 +151,7 @@ for o, a in opts:
 if verbose_mode:
     print(f"Input dir: {input_dir}")
     print(f"Output file: {output_file}")
-    if cache_file != None:
+    if cache_file is not None:
         print(f"Cache file: {cache_file}")
     else:
         print("Caching disabled")
@@ -187,7 +187,7 @@ for root, dirs, files in os.walk(input_dir):
                 cdata = pickle.loads(cache[fqfile])
             except KeyError:
                 cdata = None
-            if cdata == None or mtime > cdata['mtime']:
+            if cdata is None or mtime > cdata['mtime']:
                 # Cache doesn't exist or is too old.
                 # Come up with brand new data and cache it.
                 try:
@@ -217,7 +217,7 @@ for root, dirs, files in os.walk(input_dir):
                 date = cdata['date']
                 kml_lat = cdata['kml_lat']
                 kml_lon = cdata['kml_lon']
-                if date == None:
+                if date is None:
                     # Well there's no data for this then
                     if verbose_mode:
                         print(" - No coordinates found, skipping")
