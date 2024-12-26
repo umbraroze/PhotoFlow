@@ -4,9 +4,9 @@ title: "Photo Importinator: Usage"
 permalink: /photo_importinator/usage.html
 ---
 
-([Back to Photo Importinator](/photo_importinator/))
+([Back to Photo Importinator](./))
 
-# Usage
+# Photo Importinator: Usage
 
 ## Terminology and basic premise
 
