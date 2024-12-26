@@ -7,6 +7,9 @@ import tomllib
 from enum import Enum
 from pathlib import Path
 from dataclasses import dataclass
+import logging
+
+logger = logging.getLogger(__name__)
 
 ###### Configuration #####################################################
 
@@ -206,6 +209,18 @@ class Configuration:
     def validate(self):
         if not self.is_valid_config():
             sys.exit("Configuration is not valid")
+
+    def is_converson_needed(self,path:Path) -> bool:
+        """Will check if conversion is needed for a given file. Will return
+        True if the file suffix matches any of the suffixes given in
+        chosen camera's convert_raw list."""
+        if self.convert_raw is None or len(self.convert_raw) < 1:
+            return False
+        suffix = path.suffix.upper()
+        for s in self.convert_raw:
+            if s == suffix:
+                return True
+        return False
 
     def list_cameras_and_targets(self):
         """Prints out valid cameras and targets. Only requres configuration

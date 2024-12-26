@@ -9,11 +9,20 @@ from configuration import Configuration
 from dazzle import *
 from photo_processing import *
 
+
+# TODO: More extensive use of logging facility.
+# https://docs.python.org/3/library/logging.html
+import logging
+logger = logging.getLogger(__name__)
+
 ###### Main program ######################################################
 
 def main() -> int:
     """Photo Importinator main program."""
-    
+
+    logging.basicConfig(filename='photo_importinator.log', level=logging.INFO)
+    logger.info('Photo Importinator started.')
+
     # Initialise Colorama
     colorama.just_fix_windows_console()
     
@@ -48,6 +57,8 @@ def main() -> int:
     queue = ImportQueue(configuration)
     queue.populate()
     queue.print_status()
+
+    logger.info('Photo Importinator finished normally.')
 
     return 0
 

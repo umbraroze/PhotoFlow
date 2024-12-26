@@ -4,17 +4,73 @@ from pathlib import Path
 import exiv2
 from dazzle import *
 from configuration import Configuration
+from dataclasses import dataclass
+import time
+from enum import Enum
+import logging
+
+logger = logging.getLogger(__name__)
 
 ###### Photo processing task #############################################
 
+@dataclass
 class Task:
     """Task representing image moving or conversion. Keeps track of the
     state of the process and stats."""
+
+    class Status(Enum):
+        UNKNOWN = 0
+        READY = 1
+        RUNNING = 2
+        DONE = 3
+        SKIPPED = 4
+        FAILURE = 5
+
+    status:Status = Status.UNKNOWN
     source_file:Path = None
     target_file:Path = None
-    def __init__(self,source_file:Path,target_file:Path):
+    file_type:str = None
+    convert:bool = False
+    start_time:time = None
+    end_time:time = None
+    total_time:float = None
+    dry_run:bool = False
+    def __init__(self,configuration:Configuration,source_file:Path,target_file:Path):
+        # Note: configuration is only read, not stored.
         self.source_file = source_file
         self.target_file = target_file
+        self.file_type = identify_file(source_file)
+        self.convert = configuration.is_converson_needed(source_file)
+        self.dry_run = configuration.dry_run
+        if self.convert:
+            self.target_file = dng_suffix_for(self.target_file)
+        self.status = Task.Status.READY
+    def _real_execute(self):
+        self.status = Task.Status.DONE
+    def execute(self):
+        self.start_time = time.time()
+        if self.dry_run:
+            self.status = Task.Status.SKIPPED
+        else:
+            self._real_execute()
+        self.end_time = time.time()
+        self.total_time = self.end_time - self.start_time
+    def print_status(self):
+        print(f"{self.source_file}\n  Format: {self.file_type} * Convert: {self.convert} * Dry run: {self.dry_run}\n  {ICON_TO}  {self.target_file}")
+
+def dng_suffix_for(file:Path) -> Path:
+    # It CAN'T be this easy! (import antigravity)
+    file.suffix = '.DNG'
+    return file
+
+def identify_file(file:Path) -> str:
+    """Returns a normalised file identification."""
+    s = file.suffix[1:].upper()
+    match s:
+        case 'JPG' | 'JPEG' | 'JFIF':
+            return 'JPEG'
+        case _:
+            return s
 
 def read_date(file:Path) -> datetime.datetime:
     """Reads the date for the specified image file. Will try to grab the
@@ -63,7 +119,6 @@ class ImportQueue:
                     date = read_date(fqfile)
                     datef = date.strftime("%Y-%m-%d")
                     target_dir = self._config.target_path / self._config.date_to_path(date)
-                    # TODO: Check file conversion here
                     target_file = target_dir / file
                     if datef not in self._target_directories:
                         self._target_directories[datef] = {
@@ -72,7 +127,9 @@ class ImportQueue:
                         }
                     else:
                         self._target_directories[datef]['count'] += 1
-                    print(f"{fqfile}\n  ({datef})\n  {ICON_TO}  {target_file}")
+                    task = Task(self._config,fqfile,target_file)
+                    task.print_status() # DEBUG
+                    self._jobs.append(task)
 
     def print_status(self):
         """Print out the current status of job queue and statistics."""
