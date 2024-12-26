@@ -16,6 +16,11 @@ This is suprisingly tricky and none of the apps I tried did it right!
 * [Final "stable" PowerShell version](https://github.com/umbraroze/PhotoFlow/releases/tag/photoflow-powershell-final)
   is still available for download.
 
+## Contents
+
+* **[History](history.html)** &mdash; or why is this stuff so hard, and why does this script exist?
+* **[Usage](usage.html)** &mdash; how to set up and configure the Photo Importinator
+
 ## Overview
 
 > "What mighty contests rise from trivial things."  
@@ -65,25 +70,3 @@ instead. Oh no, what will I do now?! Why, never despair:
 
 The script allows for flexible configuration of the whole process,
 with different settings for different cameras and different import targets.
-
-## History
-
-This is the *third* iteration of the same idea.
-
-I originally had a Microsoft Power Automate script. It worked.
-It was a bit janky, though not because of Power Automate.
-I mostly used it because Adobe DNG Converter couldn't be scripted
-otherwise. Then stuff broke for good. *#JustAdobeThings*
-
-The second iteration was a PowerShell script. It worked
-reliably, and was not janky at all, actually. Especially when I
-decided to first convert the raw files to DNG manually, and
-later found `dnglab` which does the job considerably more
-batch-processing-friendly than the Adobe tool.
-
-Just that at some point the script grew to the point that I really
-needed to throw some actual software organisation at it. While
-PowerShell can ostensibly do some fancy complicated organisation
-of code, that's not really what I use PowerShell for.
-
-Decided to rewrite it in Python. So now we're here.
