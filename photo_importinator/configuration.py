@@ -48,6 +48,8 @@ class Configuration:
     convert_raw: list[str] = None
     backup_path: Path = None
     sevenzip_path: Path = None
+    dnglab_path: Path = None
+    dnglab_flags: list = None
 
     def is_valid_config(self) -> bool:
         """Returns true if the current configuration contains no problematic
@@ -185,12 +187,23 @@ class Configuration:
             self.sevenzip_path = Path(self._config['Backup']['7zip_path'])
         except KeyError:
             self.sevenzip_path = '7z' # Guess it's up to OS now to find this thing
+        # Location of dnglab executable and the command line parameters
+        try:
+            self.dnglab_path = Path(self._config['Conversion']['dnglab_path'])
+        except KeyError:
+            self.dnglab_path = 'dnglab'
+        try:
+            self.dnglab_flags = self._config['Conversion']['convert_flags']
+        except KeyError:
+            self.dnglab_flags = None
 
     def find_source_path_card(self):
-        # This should
-        # - check that the card is inserted (OS trickery?)
-        # - check that there's a DCIM folder
-        raise RuntimeError("Unimplemented")
+        # TODO: first check that the card is inserted (needs OS trickery?)
+        self.source_path = Path(self.card) / '/DCIM'
+        if not self.source_path.exists():
+            print(f"Source card {self.card} does not have a DCIM folder.")
+            logger.error(f"Source card {self.card} does not have a DCIM folder")
+            sys.exit(1)
 
     def find_source_path_cloud(self):
         cloud_path = Path(self._config['Cloud'][self.card])
@@ -219,10 +232,12 @@ class Configuration:
 
     def get_source_folders(self) -> list:
         if self.is_cloud_source():
-            src = [self.source_path]
+            return [self.source_path]
         else:
-            raise RuntimeError("Unimplemented")
-        return src
+            # Get all subdirectories of .source_path and prepend the actual source path.
+            # Because os.listdir() doesn't return the prefixes.
+            # TODO: Does this need more filtering? (Doesn't seem to be picking . and .. etc)
+            return map(lambda x: self.source_path / x, os.listdir(self.source_path))
 
     def parse(self):
         """Read configuration. Do all of the relevant steps to ensure

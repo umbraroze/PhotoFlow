@@ -64,7 +64,7 @@ def main() -> int:
     queue.populate()
     queue.run()
 
-    #queue.print_status()
+    queue.print_status()
 
     logger.info('Photo Importinator finished normally.')
 

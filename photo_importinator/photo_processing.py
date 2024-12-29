@@ -36,17 +36,13 @@ class Task:
     start_time:time = None
     end_time:time = None
     total_time:float = None
-    dry_run:bool = False
     def _execute(self):
         raise RuntimeError("This task needs to be subclassed.") # More elegant way of handling this?
     def execute(self):
         """Perform the task. Will perform the timekeeping for the task and
         call the _execute method in subclass for the """
         self.start_time = time.time()
-        if self.dry_run:
-            self.status = Task.Status.SKIPPED
-        else:
-            self._execute()
+        self._execute()
         self.end_time = time.time()
         self.total_time = self.end_time - self.start_time
 
@@ -56,6 +52,7 @@ class BackupTask(Task):
     source: Path = None
     target: Path = None
     sevenzip_path: Path = None
+    dry_run:bool = False
     def __init__(self,configuration:Configuration):
         if configuration.skip_backup:
             self.dry_run = True
@@ -68,10 +65,11 @@ class BackupTask(Task):
             logger.info(f"Start backup: {self.source} to {self.target}")
             subprocess.run([self.sevenzip_path,'a','-t7z', '-r', self.target, self.source])
             # TODO: Error checking and status fudging.
+            self.status = Task.Status.DONE
         else:
             logger.info(f"Backup skipped (would have archived {self.source} to {self.target})")
-            print("Backup skipped.")
-        self.status = Task.Status.DONE
+            print(f"{ICON_SKIP} Backup skipped.")
+            self.status = Task.Status.SKIPPED
 
 @dataclass
 class MoveTask(Task):
@@ -82,8 +80,11 @@ class MoveTask(Task):
     target_file:Path = None
     file_type:str = None
     convert:bool = False
+    dry_run:bool = False
     skip_import:bool = False
     leave_originals:bool = False
+    dnglab_path:Path = None
+    dnglab_flags:list = None
     def __init__(self,configuration:Configuration,source_file:Path,target_file:Path):
         # Note: configuration is only read, not stored.
         self.source_file = source_file
@@ -96,6 +97,8 @@ class MoveTask(Task):
         if self.convert:
             self.target_file = dng_suffix_for(self.target_file)
         self.status = Task.Status.READY
+        self.dnglab_path = configuration.dnglab_path
+        self.dnglab_flags = configuration.dnglab_flags
 
     def _move(self):
         if self.leave_originals:                
@@ -106,12 +109,28 @@ class MoveTask(Task):
             logger.info(f"Moved: {self.source_file} to {self.target_file}")
         print(f"{self.source_file} {ICON_TO}  {self.target_file}")
     def _convert(self):
-        raise RuntimeError("Unimplemented.")
+        print(f"Convert: {self.source_file} {ICON_TO}  {self.target_file}")
+        logger.info(f"Converting: {self.source_file} to {self.target_file}")
+        if self.dnglab_flags is not None:
+            cmd = [self.dnglab_path,'convert']
+            cmd.extend(self.dnglab_flags)
+            cmd.append(self.source_file)
+            cmd.append(self.target_file)
+        else:
+            cmd = [self.dnglab_path,'convert',self.source_file,self.target_file]
+        logger.info(f"Convert job: {cmd}")
+        subprocess.run(cmd)
+        # TODO: Handle errors
+        # Delete source file
+        if not self.leave_originals:
+            os.unlink(self.source_file)
 
     def _execute(self):
         if self.skip_import or self.dry_run:
             logger.info(f"Skipped: {self.source_file} to {self.target_file}")
             print(f"{ICON_SKIP} Skipped: {self.source_file} to {self.target_file}")
+            self.status = Task.Status.SKIPPED
+            return
         # Create target folder if it doesn't exist
         if not self.target_file.parent.exists():
             self.target_file.parent.mkdir(parents=True,exist_ok=True)
@@ -128,9 +147,7 @@ class MoveTask(Task):
         print(f"{self.source_file}\n  Format: {self.file_type} * Convert: {self.convert} * Dry run: {self.dry_run}\n  {ICON_TO}  {self.target_file}")
 
 def dng_suffix_for(file:Path) -> Path:
-    # It CAN'T be this easy! (import antigravity)
-    file.suffix = '.DNG'
-    return file
+        return file.parent / Path(file.stem + ".DNG")
 
 def identify_file(file:Path) -> str:
     """Returns a normalised file identification."""
@@ -148,8 +165,7 @@ def read_date(file:Path) -> datetime.datetime:
     try:
         img = exiv2.ImageFactory.open(str(file))
     except exiv2.Exiv2Error:
-        print(f"File {file} cannot be read by Exiv2. Skipping.")
-        sys.exit(1)
+        return None
     img.readMetadata()
     img_data = img.exifData()
     date_raw = img_data["Exif.Photo.DateTimeOriginal"].getValue()
@@ -184,8 +200,22 @@ class ImportQueue:
                     # Skip non-files
                     if not os.path.isfile(fqfile):
                         continue
+                    # Is this one of the files we want to ignore?
+                    if self._config.ignore is not None:
+                        ign = False
+                        for ignored in self._config.ignore:
+                            if str(file) == ignored:
+                                ign = True
+                        if ign == True:
+                            logger.info(f"{fqfile} ignored")
+                            print(f"{ICON_SKIP} {fqfile} ignored")
+                            continue
                     # OK, we're cool, continuing
                     date = read_date(fqfile)
+                    if date is None:
+                        logger.warning(f"File {file} cannot be read by Exiv2. Skipping.")
+                        print(f"{ICON_SKIP} Date for {file} cannot be read. Skipping.")
+                        continue
                     datef = date.strftime("%Y-%m-%d")
                     target_dir = self._config.target_path / self._config.date_to_path(date)
                     target_file = target_dir / file
