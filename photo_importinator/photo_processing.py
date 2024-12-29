@@ -8,6 +8,8 @@ from dataclasses import dataclass
 import time
 from enum import Enum
 import logging
+import subprocess
+import shutil
 
 logger = logging.getLogger(__name__)
 
@@ -15,9 +17,6 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class Task:
-    """Task representing image moving or conversion. Keeps track of the
-    state of the process and stats."""
-
     class Status(Enum):
         UNKNOWN = 0
         READY = 1
@@ -25,36 +24,98 @@ class Task:
         DONE = 3
         SKIPPED = 4
         FAILURE = 5
-
     status:Status = Status.UNKNOWN
-    source_file:Path = None
-    target_file:Path = None
-    file_type:str = None
-    convert:bool = False
     start_time:time = None
     end_time:time = None
     total_time:float = None
     dry_run:bool = False
+    def _execute(self):
+        raise RuntimeError("This task needs to be subclassed.") # More elegant way of handling this?
+    def execute(self):
+        """Perform the task. Will perform the timekeeping for the task and
+        call the _execute method in subclass for the """
+        self.start_time = time.time()
+        if self.dry_run:
+            self.status = Task.Status.SKIPPED
+        else:
+            self._execute()
+        self.end_time = time.time()
+        self.total_time = self.end_time - self.start_time
+
+# TODO: Ideally, the backup task should use the appropriate 7zip library (py7zr) for this task.
+@dataclass
+class BackupTask(Task):
+    source: Path = None
+    target: Path = None
+    sevenzip_path: Path = None
+    def __init__(self,configuration:Configuration):
+        if configuration.skip_backup:
+            self.dry_run = True
+        self.dry_run = configuration.dry_run
+        self.target = configuration.backup_path / Path(f"{configuration.camera}_{configuration.date_to_filename()}.7z")
+        self.source = configuration.source_path
+        self.sevenzip_path = configuration.sevenzip_path
+    def _execute(self):
+        if not self.dry_run:
+            logger.info(f"Start backup: {self.source} to {self.target}")
+            subprocess.run([self.sevenzip_path,'a','-t7z', '-r', self.target, self.source])
+            # TODO: Error checking and status fudging.
+        else:
+            logger.info(f"Backup skipped (would have archived {self.source} to {self.target})")
+            print("Backup skipped.")
+        self.status = Task.Status.DONE
+
+@dataclass
+class MoveTask(Task):
+    """Task representing image moving or conversion. Keeps track of the
+    state of the process and stats."""
+
+    source_file:Path = None
+    target_file:Path = None
+    file_type:str = None
+    convert:bool = False
+    skip_import:bool = False
+    leave_originals:bool = False
     def __init__(self,configuration:Configuration,source_file:Path,target_file:Path):
         # Note: configuration is only read, not stored.
         self.source_file = source_file
         self.target_file = target_file
         self.file_type = identify_file(source_file)
         self.convert = configuration.is_converson_needed(source_file)
+        self.skip_import = configuration.skip_import
         self.dry_run = configuration.dry_run
+        self.leave_originals = configuration.leave_originals
         if self.convert:
             self.target_file = dng_suffix_for(self.target_file)
         self.status = Task.Status.READY
-    def _real_execute(self):
-        self.status = Task.Status.DONE
-    def execute(self):
-        self.start_time = time.time()
-        if self.dry_run:
-            self.status = Task.Status.SKIPPED
+
+    def _move(self):
+        if self.leave_originals:                
+            shutil.copy(self.source_file,self.target_file)
+            logger.info(f"Copied: {self.source_file} to {self.target_file}")
         else:
-            self._real_execute()
-        self.end_time = time.time()
-        self.total_time = self.end_time - self.start_time
+            shutil.move(self.source_file,self.target_file)
+            logger.info(f"Moved: {self.source_file} to {self.target_file}")
+        print(f"{self.source_file} {ICON_TO}  {self.target_file}")
+    def _convert(self):
+        raise RuntimeError("Unimplemented.")
+
+    def _execute(self):
+        if self.skip_import or self.dry_run:
+            logger.info(f"Skipped: {self.source_file} to {self.target_file}")
+            print(f"{ICON_SKIP} Skipped: {self.source_file} to {self.target_file}")
+        # Create target folder if it doesn't exist
+        if not self.target_file.parent.exists():
+            self.target_file.parent.mkdir(parents=True,exist_ok=True)
+            logger.info(f"Created directory {self.target_file.parent}")
+        # We handle the file. Finally.
+        if not self.convert:
+            # Move or copy the file.
+            self._move()
+        else:
+            self._convert()
+        # TODO: Error checking here.
+        self.status = Task.Status.DONE
     def print_status(self):
         print(f"{self.source_file}\n  Format: {self.file_type} * Convert: {self.convert} * Dry run: {self.dry_run}\n  {ICON_TO}  {self.target_file}")
 
@@ -127,17 +188,28 @@ class ImportQueue:
                         }
                     else:
                         self._target_directories[datef]['count'] += 1
-                    task = Task(self._config,fqfile,target_file)
-                    task.print_status() # DEBUG
+                    task = MoveTask(self._config,fqfile,target_file)
+                    #task.print_status() # DEBUG
                     self._jobs.append(task)
 
     def print_status(self):
         """Print out the current status of job queue and statistics."""
         job_cnt = len(self._jobs)
-        pending_cnt = 0
-        done_cnt = 0
-        print(f"Import queue status: {job_cnt} jobs queued, {pending_cnt} pending, {done_cnt} done.")
+        status_cnt = {}
+        for job in self._jobs:
+            if job.status in status_cnt:
+                status_cnt[job.status] += 1
+            else:
+                status_cnt[job.status] = 1
+        print(f"{job_cnt} jobs queued.")
+        print("Statuses:")
+        for s in status_cnt.keys():
+            print(f" - {s}: {status_cnt[s]}")
         print("Day summary:")
         for d in self._target_directories.keys():
             print(f" - {d}, {self._target_directories[d]['count']} images")
 
+    def run(self):
+        """Run all of the tasks in the queue."""
+        for job in self._jobs:
+            job.execute()

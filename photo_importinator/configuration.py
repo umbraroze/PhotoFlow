@@ -32,6 +32,7 @@ class Configuration:
     skip_backup: bool = False
     dry_run: bool = False
     leave_originals: bool = False
+    overwrite_target: bool = False
     camera: str = None
     source_path: Path = None
     target_path: Path = None
@@ -39,6 +40,7 @@ class Configuration:
     ignore: list[str] = None
     convert_raw: list[str] = None
     backup_path: Path = None
+    sevenzip_path: Path = None
 
     def is_valid_config(self) -> bool:
         """Returns true if the current configuration contains no problematic
@@ -67,8 +69,12 @@ class Configuration:
             except KeyError:
                 return Path.home() / '.config/photo_importinator/photo_importinator_config.toml'
 
+    def date_to_filename(self) -> str:
+        """Returns the desired datestamp in ISO format suitable for file names."""
+        return self.date.strftime('%Y%m%d')
     def date_to_str(self) -> str:
-        return self.date.date.strftime('%Y-%m-%d')
+        """Returns the desired datestamp in ISO format."""
+        return self.date.strftime('%Y-%m-%d')
     def date_to_path(self,date:datetime) -> Path:
         """Returns the directory structure for the given day."""
         d = date.date()
@@ -99,6 +105,7 @@ class Configuration:
         parser.add_argument('--skip-import',action='store_true',help="skip the final import phase")
         parser.add_argument('--dry-run',action='store_true',help="do nothing, except explain what would be done")
         parser.add_argument('--leave-originals',action='store_true',help="leave original files intact")
+        parser.add_argument('--overwrite-target',action='store_true',help="overwrite target files if found (default: just skip)")
         # Camera
         parser.add_argument('camera',default=None,nargs='?',help="camera name.")
         # Done with setup, parse the arguments.
@@ -161,12 +168,21 @@ class Configuration:
             self.ignore = camera_details['ignore']
         if 'convert_raw' in camera_details:
             self.convert_raw = camera_details['convert_raw']
+        # The directory where backups are stored
         try:
             self.backup_path = Path(self._config['Target'][self.target]['backup_path'])
         except KeyError:
             sys.exit("Backup path not specified for target {self.target} in the configuration file.")
+        # Location of 7-Zip executable
+        try:
+            self.sevenzip_path = Path(self._config['Backup']['7zip_path'])
+        except KeyError:
+            self.sevenzip_path = '7z' # Guess it's up to OS now to find this thing
 
     def find_source_path_card(self):
+        # This should
+        # - check that the card is inserted (OS trickery?)
+        # - check that there's a DCIM folder
         raise RuntimeError("Unimplemented")
 
     def find_source_path_cloud(self):
@@ -183,9 +199,12 @@ class Configuration:
             sys.exit(1)
 
     def is_cloud_source(self):
+        """Return True if the source is a cloud drive (i.e. found in Cloud
+        section of sources)"""
         return (self.card in self._config['Cloud'])
 
     def find_source_path(self):
+        """Find and set the source path based on selected source type."""
         if self.is_cloud_source():
             self.find_source_path_cloud()    
         else:
@@ -195,8 +214,7 @@ class Configuration:
         if self.is_cloud_source():
             src = [self.source_path]
         else:
-            print("get_source_folders unimplemented for cards")
-            sys.exit(1)
+            raise RuntimeError("Unimplemented")
         return src
 
     def parse(self):
@@ -208,7 +226,8 @@ class Configuration:
 
     def validate(self):
         if not self.is_valid_config():
-            sys.exit("Configuration is not valid")
+            print("Configuration is not valid")
+            sys.exit(1)
 
     def is_converson_needed(self,path:Path) -> bool:
         """Will check if conversion is needed for a given file. Will return

@@ -54,9 +54,14 @@ def main() -> int:
 
     print(f"File A {ICON_TO}  File B. {ICON_SKIP}  Skipped. {ICON_WARN}  Warning. {ICON_CLOUD}  Cloud.")
 
+    backuptask = BackupTask(configuration)
+    backuptask.execute()
+
     queue = ImportQueue(configuration)
     queue.populate()
-    queue.print_status()
+    queue.run()
+
+    #queue.print_status()
 
     logger.info('Photo Importinator finished normally.')
 
