@@ -1,3 +1,10 @@
+#!/usr/bin/python
+##########################################################################
+# Photo Importinator III: This Time It's Python For Some Reason
+##########################################################################
+# (c) 2024 Rose Midford.
+# Distributed under the MIT license. See the LICENSE file in parent folder
+# for the full license terms.
 
 import os, sys, platform
 import re
