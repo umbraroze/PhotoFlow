@@ -54,9 +54,9 @@ class BackupTask(Task):
     sevenzip_path: Path = None
     dry_run:bool = False
     def __init__(self,configuration:Configuration):
+        self.dry_run = configuration.dry_run
         if configuration.skip_backup:
             self.dry_run = True
-        self.dry_run = configuration.dry_run
         self.target = configuration.backup_path / Path(f"{configuration.camera}_{configuration.date_to_filename()}.7z")
         self.source = configuration.source_path
         self.sevenzip_path = configuration.sevenzip_path
@@ -87,6 +87,7 @@ class MoveTask(Task):
     dnglab_flags:list = None
     def __init__(self,configuration:Configuration,source_file:Path,target_file:Path):
         # Note: configuration is only read, not stored.
+        # TODO: Is it really such a bad thing not to store the configuration locally?
         self.source_file = source_file
         self.target_file = target_file
         self.file_type = identify_file(source_file)
@@ -101,6 +102,9 @@ class MoveTask(Task):
         self.dnglab_flags = configuration.dnglab_flags
 
     def _move(self):
+        """Will either move the file to target folder, or copy it,
+        depending on whether we want to leave the originals."""
+        # TODO: Error checking?
         if self.leave_originals:                
             shutil.copy(self.source_file,self.target_file)
             logger.info(f"Copied: {self.source_file} to {self.target_file}")
@@ -108,9 +112,21 @@ class MoveTask(Task):
             shutil.move(self.source_file,self.target_file)
             logger.info(f"Moved: {self.source_file} to {self.target_file}")
         print(f"{self.source_file} {ICON_TO}  {self.target_file}")
+        self.status = Task.Status.DONE
+
     def _convert(self):
+        """Convert the raw file using dnglab and remove the original
+        (if desired)."""
         print(f"Convert: {self.source_file} {ICON_TO}  {self.target_file}")
         logger.info(f"Converting: {self.source_file} to {self.target_file}")
+        self.status = Task.Status.RUNNING
+
+        if self.target_file.exists():
+            logger.info(f"{self.source_file} skipped, {self.target_file} exists.")
+            print(f"{ICON_SKIP}  {self.source_file}: Target file {self.target_file} exists. Skipped.")
+            self.status = Task.Status.SKIPPED
+            return
+
         if self.dnglab_flags is not None:
             cmd = [self.dnglab_path,'convert']
             cmd.extend(self.dnglab_flags)
@@ -119,11 +135,32 @@ class MoveTask(Task):
         else:
             cmd = [self.dnglab_path,'convert',self.source_file,self.target_file]
         logger.info(f"Convert job: {cmd}")
-        subprocess.run(cmd)
-        # TODO: Handle errors
-        # Delete source file
-        if not self.leave_originals:
+        try:
+            result = subprocess.run(cmd,capture_output=True,check=True)
+            try:
+                str(result.stdout).index("Converted 1/1 files")
+                run_successfully = True
+            except ValueError:
+                logger.error(f"Conversion failed, dnglab reported no conversion, "+
+                             f"return code {result.returncode} - "+
+                             f"stdout: {result.stdout} stderr: {result.stderr}")
+                print(f"{ICON_WARN}  dnglab reported no conversion took place.")
+                run_successfully = False
+                self.status = Task.Status.FAILURE
+        except subprocess.CalledProcessError:
+            logger.error(f"Conversion failed with return code {result.returncode} - "+
+                         f"stdout: {result.stdout} stderr: {result.stderr}")
+            print(f"{ICON_WARN} Error {result.returncode} with conversion.")
+            run_successfully = False
+            self.status = Task.Status.FAILURE
+        # If we failed to convert, delete the target file.
+        if not run_successfully:
+            os.unlink(self.target_file)
+        # Delete source file if we were successful and we actually want it
+        if run_successfully and not self.leave_originals:
             os.unlink(self.source_file)
+        if self.status == Task.Status.RUNNING:
+            self.status = Task.Status.DONE
 
     def _execute(self):
         if self.skip_import or self.dry_run:
@@ -141,8 +178,7 @@ class MoveTask(Task):
             self._move()
         else:
             self._convert()
-        # TODO: Error checking here.
-        self.status = Task.Status.DONE
+        # TODO: Further error checking/reporting here?
     def print_status(self):
         print(f"{self.source_file}\n  Format: {self.file_type} * Convert: {self.convert} * Dry run: {self.dry_run}\n  {ICON_TO}  {self.target_file}")
 
