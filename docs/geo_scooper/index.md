@@ -4,6 +4,8 @@ title: Photo Geo Scooper
 permalink: /geo_scooper/
 ---
 
+([Back to PhotoFlow](../))
+
 # Photo Geo Scooper
 
 * Distributed under MIT license.

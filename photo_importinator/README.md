@@ -46,10 +46,9 @@ Example file is provided in
 Copy the file as `photo_importinator_config.toml` and place it in
 configuration directory
 (`~\AppData\Local\photo_importinator\` in Windows,
-`~/.config/photo_importinator/` in POSIXy-land;
-you should create the folder in case it doesn't exist, and why would
-it, if you haven't used the app before - that'd be quite weird,
-right?)
+`~/.config/photo_importinator/` in POSIXy-land).
+Edit the file as desired.
 
-Then edit the file as desired. (Clearer instructions forthcoming as
-situation develops. ...I hope.)
+More information is found in the
+[usage section](https://umbraroze.github.io/PhotoFlow/photo_importinator/usage.html)
+in the home page.

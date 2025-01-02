@@ -4,6 +4,8 @@ title: Photo Importinator
 permalink: /photo_importinator/
 ---
 
+([Back to PhotoFlow](../))
+
 # Photo Importinator
 
 *It imports photos!  
