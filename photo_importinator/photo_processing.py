@@ -2,7 +2,7 @@
 ##########################################################################
 # Photo Importinator III: This Time It's Python For Some Reason
 ##########################################################################
-# (c) 2024 Rose Midford.
+# (c) 2024,2025 Rose Midford.
 # Distributed under the MIT license. See the LICENSE file in parent folder
 # for the full license terms.
 
