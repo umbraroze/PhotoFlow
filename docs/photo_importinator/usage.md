@@ -26,6 +26,47 @@ through a server path *à la* `\\NAS-SERVER\photos`). Each target also has
 a distinct way of organising files (e.g. "files in my NAS server should be
 organised under `YEAR\MONTH\DAY` hierarchy").
 
+### What is a camera, anyway, when you really think about it?
+
+A *camera* is, well, a convenient label we give for a particular source of
+photos. It's an internal label we use for settings for a particular scenario
+when we move images from that particular source
+
+For example, I can have a camera called `Nikon_D780`, which uses SD card,
+which usually appears as drive `D:` on my computer. Whevever I format the
+card on the camera (as I do after every import), the gamera gives the card
+the volume label `NIKON D780`. The camera puts one file in the DCIM
+folder, called `NC_FLLST.DAT`, which shouldn't be touched because none of
+the software I have at hand knows a darn about it. Also, being a Nikon camera,
+it uses `.NEF` raw files, which I prefer to be converted to the DNG format
+automatically. Also, backups will be stored in vein of
+`Nikon_D780_20241122.7z`, with the camera name and date stamp.
+
+We can now express all of this information like this:
+
+```toml
+[Cameras.Nikon_D780]
+card = 'D:'
+card_label = 'NIKON D780'
+ignore = [ 'NC_FLLST.DAT' ]
+convert_raw = [ '.NEF' ]
+```
+
+And now whever I refer to my Nikon D780, I can just tell Photo Importinator
+"I want photos from `Nikon_D780`, please". Or:
+
+```console
+> photo_importinator Nikon_D780
+```
+
+No need to tell where the files come from (usually - Windows may sometimes use
+different drive letter, which can be overridden), no need to tell which files to
+ignore, no need to tell which files to convert. Nice! And since I have a default
+target set up, the one and only NAS I have, the importinator also knows where
+the files and backups go.
+
+So how do we configure the rest?
+
 ## Configuration file
 
 The configuration file template is provides as `photo_importinator_config.example.toml`.
@@ -34,14 +75,20 @@ directory, edit it appropriately as needed, and you're good to go.
 
 ### Location
 
-The configuration directory is located in AppData in Windows
-(`~\AppData\Local\photo_importinator\`)
-and in XDG configuration directory in POSIXy world
+The configuration directory is located in Local AppData in Windows
+(`C:\Users\[you]\AppData\Local\photo_importinator\`). In
+Windows Explorer, you can find it by entering `%AppData%`
+in Explorer bar or `Win+R` dialog
+(you end up in your Roaming AppData), navigating up,
+and going to `Local` subfolder.
+
+In Linux and other POSIXy systems, it is located in your
+[XDG][xdg] configuration directory
 (usually `~/.config/photo_importinator/`).
 
-You should create the folder in case it doesn't exist, and why would
-it, if you haven't used the app before - that'd be quite weird,
-right?
+In both cases, you should create the `photo_importinator` folder
+in case it doesn't exist, and why would it, if you haven't used the
+app before - that'd be quite weird, right?
 
 ### The content
 
@@ -127,9 +174,6 @@ card = 'OneDrive'
 
 As with targets, the default camera can be specified here, or left as `'None'`.
 
-The internal camera names (in this example, `Nikon_D780` and `Nokia`) will also
-be used as prefixes of backup files (e.g. `Nokia_20241122.7z`).
-
 For cameras, the only real required key is `card`. Just specify the drive letter
 in Windows or mount point in POSIXland. Or, if it's a cloud source, just specify
 which!
@@ -147,3 +191,4 @@ conversion using dnglab.
 
 [DCIM]: https://en.wikipedia.org/wiki/Design_rule_for_Camera_File_system
 [pyformat]: https://cheatography.com/brianallan/cheat-sheets/python-f-strings-number-formatting/
+[xdg]: https://specifications.freedesktop.org/basedir-spec/latest/
