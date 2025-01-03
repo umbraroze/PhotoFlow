@@ -30,10 +30,13 @@ organised under `YEAR\MONTH\DAY` hierarchy").
 
 A *camera* is, well, a convenient label we give for a particular source of
 photos. It's an internal label we use for settings for a particular scenario
-when we move images from that particular source
+when we move images from that particular source.
 
-For example, I can have a camera called `Nikon_D780`, which uses SD card,
-which usually appears as drive `D:` on my computer. Whevever I format the
+For example, I have a Nikon D780, and for the purposes of
+using this program, I have decided to arbitrarily call it `Nikon_D780`.
+
+The camera uses SD cards, which, when I put them to the SD card reader,
+usually appear as drive `D:` on my computer. Whevever I format the
 card on the camera (as I do after every import), the gamera gives the card
 the volume label `NIKON D780`. The camera puts one file in the DCIM
 folder, called `NC_FLLST.DAT`, which shouldn't be touched because none of
@@ -130,6 +133,14 @@ This is flexible enough if you want the folders to have names like
 (why would you, though), but if you want, say, actual month names,
 then this gets hella trickier.
 
+Some simple examples:
+
+- YYYY/MM/DD: `'{year:04d}/{month:02d}/{day:02d}'`
+- YYYY-MM/DD: `'{year:04d}-{month:02d}/{day:02d}'`
+- YYYY-MM: `'{year:04d}-{month:02d}'`
+
+...I hope you get the idea.
+
 Note how the target subsections are named in the configuration file. If you want your
 target to be named `BLAH`, then the configuration should be in the section called
 `[Target.BLAH]`. Same goes with the cameras below.
@@ -188,6 +199,17 @@ Nikon mystery data file.)
 
 `convert_raw` should list which file extensions trigger the automatic DNG
 conversion using dnglab.
+
+## Using the script with Windows Terminal and PowerShell
+
+You can add something like this to your PowerShell profile
+(located at `C:\Users\[you]\Documents\WindowsPowerShell\Microsoft.PowerShell_profile.ps1`):
+
+```powershell
+function photo_importinator {
+  & python.exe "C:\whatever_folder_you_installed_this_on\photo_importinator\photo_importinator.py" $args
+}
+```
 
 [DCIM]: https://en.wikipedia.org/wiki/Design_rule_for_Camera_File_system
 [pyformat]: https://cheatography.com/brianallan/cheat-sheets/python-f-strings-number-formatting/

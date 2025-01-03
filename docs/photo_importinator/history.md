@@ -15,12 +15,57 @@ that had to be whacked apart.
 
 ## Primordial era
 
-I don't really want to talk about how photo importing worked
-with Adobe Photoshop Elements 14 Organizer. I need some heavy
-self-reflection and therapy before I can talk about *those*
-days. *#JustAdobeThings*
+My photos used to live on local hard drive, but eventually,
+the move to using a NAS was inevitable. By the time when I
+moved my photos to my NAS for the first time, I was
+using Adobe Photoshop Elements 14 Organizer.
 
-Anyway, for a while after that, I just copied stuff over
+Adobe software really is built on a small set of principles.
+Among them:
+
+1. We have certain *opinions* on how you should operate
+   from now on when you use this software.
+2. Don't you dare to use any other tools.
+3. Don't you dare to touch the files I've touched yourself,
+   or else.
+
+Now, PSEO had this particular set of *opinions:* You can import
+stuff from SD card real smooth. Importing from other sources?
+Real jank. Oh and you can't trust the camera to put files in
+DCIM folder. If you have an Android phone and you also use the
+SD card to store app data, well, who knows, those 5000 random
+image files *could* be your photographs, you know? Who knows!?
+Be sure to make it clear, every time, which of these files
+were yours and which were not. Mark them clearly. *Don't screw
+up.* ...done importing? Cool! The application has declared your
+files should be stored in NAS folders along the lines
+of "YYYY MM DD". You don't need options. You'll thank us later.
+You *can* move the files to subfolders manually, *if* you
+allow the app to appear completely confused by your *audacity*
+to move the files outside of the software, and let the app to
+rescan and "reconnect" the files. *#JustAdobeThings*
+
+...Anyway, having gotten enough fed up with this abusive
+software, I moved away from PSEO to [digiKam][digiKam].
+An application that is just cool.
+Because it's *cool* with whatever way you choose to store
+your photos on NAS. It has an importer of its own.
+But if you don't want to use it, it's *cool*.
+You see, digiKam *understands* that you might be mildly
+traumatised by the shittiness of the importer in the
+previous app you used, so it doesn't force you to use
+its own. *It's cool. It's fine.* You can use your
+own import tool if you want.
+
+(Nowadays, I use [ACDSee Photo Studio][acdsee],
+which is likewise *cool*. It has an importer too.
+You also don't need to use it. *It's cool. It's fine.*
+You can use your own import tool if you want. Also, the
+cool thing is that these random pro tools *understand*
+each other. If digiKam gets a lot better and more usable
+and a lot faster, maybe I *will* switch back. Who knows!)
+
+For a while after that, I just copied stuff over
 with [`exiftool`][exiftool]. Not the perfect import process,
 I guess. While it got the files moved, I needed more control.
 And I wanted backups to be done automagically.
@@ -131,6 +176,14 @@ The goals:
 - Building a wider Python skillset for my future photography
   scripts! [Geoscooper](../geo_scooper/) was only the beginning.
 
+## Distant future?
+
+I dunno, maybe I'll end up being fed up with Python's multithreading
+and I go mad and rewrite the whole bloody thing in Erlang or something.
+But that is neither here or now!
+
 [exiftool]: https://exiftool.org/
 [dngconv]: https://helpx.adobe.com/camera-raw/using/adobe-dng-converter.html
 [dnglab]: https://github.com/dnglab/dnglab
+[digiKam]: https://www.digikam.org/
+[acdsee]: https://www.acdsee.com/
