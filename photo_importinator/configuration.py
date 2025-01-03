@@ -137,40 +137,66 @@ class Configuration:
         fields. Will not overwrite the values if specified on command line.
         Must only be called after command line arguments are parsed."""
         if not os.path.exists(self.configuration_file):
-            sys.exit(f"Configuration file {self.configuration_file} does not exist.")
+            logger.error("Configuration file {self.configuration_file} does not exist.")
+            print(f"Configuration file {self.configuration_file} does not exist.")
+            sys.exit(1)
+        logger.info(f"Parsing configuration file {self.configuration_file}")
         with open(self.configuration_file,'rb') as f:
             self._config = tomllib.load(f)
+        # We now have the config file.
+        # Perform other actions besides IMPORT that don't require the config
+        # to actually be parsed. To wit, camera and target list.
+        # TODO: Doing this in middle of reading config file is kinda side-effecty?
         if self.action == Configuration.Action.LIST_CAMERAS_AND_TARGETS:
             self.list_cameras_and_targets()
             sys.exit(0)
+        # No target? Then figure out the default target
         if self.target is None:
             try:
                 self.target = self._config['Target']['default']
                 if self.target == 'None':
                     self.target = None
             except KeyError:
-                sys.exit("Target was not specified on the command line, and no default target is set in the configuration file.")
+                logger.error("Target not specified.")
+                print("Target was not specified on the command line, and no default target is set in the configuration file.")
+                sys.exit(1)
+        # Do we still not know where the target is?
         if self.target is None:
-            sys.exit("Target isn't known.")
+            logger.error("Target isn't known.")
+            print("Target isn't known.")
+            sys.exit(1)
+        # OK, we have a target - is that valid?
         if self.target not in self._config['Target']:
-            sys.exit(f"Target {self.target} not specified in the configuration file.")
+            logger.error(f"Target {self.target} unknown.")
+            print(f"Target {self.target} not specified in the configuration file.")
+            sys.exit(1)
         try:
             self.target_path = Path(self._config['Target'][self.target]['path'])
         except KeyError:
-            sys.exit(f"Target {self.target} doesn't specify the destination path.")
+            logger.error(f"Target {self.target}: No path")
+            print(f"Target {self.target} doesn't specify the destination path.")
+            sys.exit(1)
         try:
             self.folder_structure = self._config['Target'][self.target]['folder_structure']
         except KeyError:
-            sys.exit(f"Target {self.target} doesn't specify folder structure.")
+            logger.error(f"Target {self.target}: No folder_structure.")
+            print(f"Target {self.target} doesn't specify folder structure.")
+            sys.exit(1)
         if self.camera is None and ('default' not in self._config['Cameras'] or self._config['Cameras']['default'] == 'None'):
-            sys.exit("Camera was not specified on the command line, and no default camera is set in the configuration file.")
+            logger.error("Camera unspecified.")
+            print("Camera was not specified on the command line, and no default camera is set in the configuration file.")
+            sys.exit(1)
         if self.camera not in self._config['Cameras']:
-            sys.exit(f"Camera {self.camera} not specified in the configuration file.")
+            logger.error("Camera {self.camera} unknown.")
+            print(f"Camera {self.camera} not specified in the configuration file.")
+            sys.exit(1)
         camera_details = self._config['Cameras'][self.camera]
         if self.card is None and 'card' in camera_details:
             self.card = camera_details['card']
         if self.card is None:
-            sys.exit(f"Camera {self.camera} has no default card and no card has been specified.")
+            logger.error("Camera {self.camera}: No card.")
+            print(f"Camera {self.camera} has no default card and no card has been specified.")
+            sys.exit(1)
         if 'card_label' in camera_details:
             self.card_label = camera_details['card_label']
         if 'ignore' in camera_details:
@@ -181,7 +207,9 @@ class Configuration:
         try:
             self.backup_path = Path(self._config['Target'][self.target]['backup_path'])
         except KeyError:
-            sys.exit("Backup path not specified for target {self.target} in the configuration file.")
+            logger.error("Target {self.target}: No backup_path.")
+            print("Backup path not specified for target {self.target} in the configuration file.")
+            sys.exit(1)
         # Location of 7-Zip executable
         try:
             self.sevenzip_path = Path(self._config['Backup']['7zip_path'])
@@ -215,6 +243,7 @@ class Configuration:
             self.source_path = cloud_path
         # Otherwise, I don't know what it is
         else:
+            logger.error("Cloud source {self.card} folder {cloud_path} doesn't exist.")
             print(f"The local sync folder of cloud service {self.card}, located at {cloud_path}, cannot be found.")
             sys.exit(1)
 
@@ -248,6 +277,7 @@ class Configuration:
 
     def validate(self):
         if not self.is_valid_config():
+            logger.error("Configuration is not valid (something slipped through?)")
             print("Configuration is not valid")
             sys.exit(1)
 
@@ -292,3 +322,4 @@ class Configuration:
                     print(f" - {t}")
         if default_target == 'None':
             print("   No default target specified.")
+        logger.info("List of cameras and targets requested. Exiting.")
