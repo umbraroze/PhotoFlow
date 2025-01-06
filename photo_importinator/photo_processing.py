@@ -52,23 +52,24 @@ class BackupTask(Task):
     source: Path = None
     target: Path = None
     sevenzip_path: Path = None
-    dry_run:bool = False
+    skip:bool = False
     def __init__(self,configuration:Configuration):
-        self.dry_run = configuration.dry_run
-        if configuration.skip_backup:
-            self.dry_run = True
+        if configuration.dry_run or configuration.skip_backup:
+            self.skip = True
         self.target = configuration.backup_path / Path(f"{configuration.camera}_{configuration.date_to_filename()}.7z")
         self.source = configuration.source_path
         self.sevenzip_path = configuration.sevenzip_path
     def _execute(self):
-        if not self.dry_run:
+        if not self.skip:
             logger.info(f"Start backup: {self.source} to {self.target}")
-            subprocess.run([self.sevenzip_path,'a','-t7z', '-r', self.target, self.source])
+            cmd = [self.sevenzip_path,'a','-t7z', '-r', self.target, self.source]
+            logger.info(f"Backup command: {cmd}")
+            subprocess.run(cmd)
             # TODO: Error checking and status fudging.
             self.status = Task.Status.DONE
         else:
             logger.info(f"Backup skipped (would have archived {self.source} to {self.target})")
-            print(f"{ICON_SKIP} Backup skipped.")
+            skip_warn("Backup skipped.")
             self.status = Task.Status.SKIPPED
 
 @dataclass
@@ -117,16 +118,17 @@ class MoveTask(Task):
     def _convert(self):
         """Convert the raw file using dnglab and remove the original
         (if desired)."""
-        print(f"Convert: {self.source_file} {ICON_TO}  {self.target_file}")
+        print(f"[Convert] {self.source_file} {ICON_TO}  {self.target_file}")
         logger.info(f"Converting: {self.source_file} to {self.target_file}")
         self.status = Task.Status.RUNNING
 
         if self.target_file.exists():
             logger.info(f"{self.source_file} skipped, {self.target_file} exists.")
-            print(f"{ICON_SKIP}  {self.source_file}: Target file {self.target_file} exists. Skipped.")
+            skip_warn(f"{self.source_file}: Target file {self.target_file} exists. Skipped.")
             self.status = Task.Status.SKIPPED
             return
 
+        # Come up with full command line invocation of dnglab, as a list.
         if self.dnglab_flags is not None:
             cmd = [self.dnglab_path,'convert']
             cmd.extend(self.dnglab_flags)
@@ -134,43 +136,56 @@ class MoveTask(Task):
             cmd.append(self.target_file)
         else:
             cmd = [self.dnglab_path,'convert',self.source_file,self.target_file]
-        logger.info(f"Convert job: {cmd}")
+        logger.info(f"Convert parameters: {cmd}")
+
+        # Run dnglab and deal with the results.
         try:
+            # Let's try running dnglab.
             result = subprocess.run(cmd,capture_output=True,check=True)
+            # OK, if it didn't blow up immediately, we have some results to deal with now.
             try:
+                # If everything went well, dnglab will report 1/1 files converted.
+                # Snoop that out of the output just to be sure.
                 str(result.stdout).index("Converted 1/1 files")
                 run_successfully = True
             except ValueError:
+                # So dnglab didn't report 1/1 converted. Either it ran successfully
+                # and said the file already existed, or conversion failed for
+                # some obscure reason.
                 logger.error(f"Conversion failed, dnglab reported no conversion, "+
                              f"return code {result.returncode} - "+
                              f"stdout: {result.stdout} stderr: {result.stderr}")
-                print(f"{ICON_WARN}  dnglab reported no conversion took place.")
+                warn("dnglab reported no conversion took place.")
                 run_successfully = False
                 self.status = Task.Status.FAILURE
         except subprocess.CalledProcessError:
+            # Something went so wrong running dnglab that there was a non-zero
+            # return code. Which means something went horribly wrong with the
+            # conversion.
             logger.error(f"Conversion failed with return code {result.returncode} - "+
                          f"stdout: {result.stdout} stderr: {result.stderr}")
-            print(f"{ICON_WARN} Error {result.returncode} with conversion.")
+            warn(f"dnglab reported an error. See log file. (Return code {result.returncode})")
             run_successfully = False
             self.status = Task.Status.FAILURE
         # If we failed to convert, delete the target file.
-        if not run_successfully:
+        if not run_successfully and self.target_file.exists():
             os.unlink(self.target_file)
-        # Delete source file if we were successful and we actually want it
+        # Delete source file if we were successful (and we actually want it)
         if run_successfully and not self.leave_originals:
             os.unlink(self.source_file)
+        # If we didn't report anything weird before, we're ready to call it quits now.
         if self.status == Task.Status.RUNNING:
             self.status = Task.Status.DONE
 
     def _execute(self):
         if self.skip_import or self.dry_run:
             logger.info(f"Skipped: {self.source_file} to {self.target_file}")
-            print(f"{ICON_SKIP} Skipped: {self.source_file} to {self.target_file}")
+            skip_warn(f"Skipped: {self.source_file} to {self.target_file}")
             self.status = Task.Status.SKIPPED
             return
         # Create target folder if it doesn't exist
         if not self.target_file.parent.exists():
-            self.target_file.parent.mkdir(parents=True,exist_ok=True)
+            self.target_file.parent.mkdir(parents=True,exist_ok=True) # Basically same as mkdirhier
             logger.info(f"Created directory {self.target_file.parent}")
         # We handle the file. Finally.
         if not self.convert:
@@ -183,7 +198,7 @@ class MoveTask(Task):
         print(f"{self.source_file}\n  Format: {self.file_type} * Convert: {self.convert} * Dry run: {self.dry_run}\n  {ICON_TO}  {self.target_file}")
 
 def dng_suffix_for(file:Path) -> Path:
-        return file.parent / Path(file.stem + ".DNG")
+    return file.parent / Path(file.stem + ".DNG")
 
 def identify_file(file:Path) -> str:
     """Returns a normalised file identification."""
@@ -244,17 +259,21 @@ class ImportQueue:
                                 ign = True
                         if ign == True:
                             logger.info(f"{fqfile} ignored")
-                            print(f"{ICON_SKIP} {fqfile} ignored")
+                            skip_warn(f"{fqfile} ignored")
                             continue
-                    # OK, we're cool, continuing
+                    # OK, we're now positive we have a file we need to deal with somehow.
+                    # Read the date.
                     date = read_date(fqfile)
                     if date is None:
-                        logger.warning(f"File {file} cannot be read by Exiv2. Skipping.")
-                        print(f"{ICON_SKIP} Date for {file} cannot be read. Skipping.")
+                        logger.warning(f"File {fqfile} cannot be read by Exiv2. Skipping.")
+                        skip_warn(f"Date for {fqfile} cannot be read. Skipping.")
                         continue
                     datef = date.strftime("%Y-%m-%d")
+                    # Figure out target directory and file name.
                     target_dir = self._config.target_path / self._config.date_to_path(date)
                     target_file = target_dir / file
+                    # Count the files for each directory.
+                    # FIXME: This seems to bug out sometimes?
                     if datef not in self._target_directories:
                         self._target_directories[datef] = {
                             'directory': target_dir,
@@ -262,8 +281,8 @@ class ImportQueue:
                         }
                     else:
                         self._target_directories[datef]['count'] += 1
+                    # Create the actual move task and put it in the queue.
                     task = MoveTask(self._config,fqfile,target_file)
-                    #task.print_status() # DEBUG
                     self._jobs.append(task)
 
     def print_status(self):

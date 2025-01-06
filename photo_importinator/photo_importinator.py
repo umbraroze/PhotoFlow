@@ -40,9 +40,13 @@ def main() -> int:
 
     print_separator_line()
     print(f"Settings file: {configuration.configuration_file}")
+    print_separator_line()
     print(colorama.Style.BRIGHT+"Settings:"+colorama.Style.RESET_ALL)
     print(f"Camera:        {configuration.camera}")
-    print(f"Card:          {configuration.card}")
+    if configuration.is_cloud_source():
+        print(f"Cloud drive:   {ICON_CLOUD} {configuration.card}")
+    else:
+        print(f"Card:          {configuration.card}")
     print(f"Backup folder: {configuration.backup_path}")
     print(f"Destination:   {configuration.date_to_path_demo()}")
     print_separator_line()
@@ -54,8 +58,6 @@ def main() -> int:
     except KeyboardInterrupt:
         print("\nImport cancelled.")
         return 1
-
-    print(f"File A {ICON_TO}  File B. {ICON_SKIP}  Skipped. {ICON_WARN}  Warning. {ICON_CLOUD}  Cloud.")
 
     backuptask = BackupTask(configuration)
     backuptask.execute()

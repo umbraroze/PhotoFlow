@@ -15,6 +15,7 @@ from enum import Enum
 from pathlib import Path
 from dataclasses import dataclass
 import logging
+from dazzle import *
 
 logger = logging.getLogger(__name__)
 
@@ -138,8 +139,7 @@ class Configuration:
         Must only be called after command line arguments are parsed."""
         if not os.path.exists(self.configuration_file):
             logger.error("Configuration file {self.configuration_file} does not exist.")
-            print(f"Configuration file {self.configuration_file} does not exist.")
-            sys.exit(1)
+            die(f"Configuration file {self.configuration_file} does not exist.")
         logger.info(f"Parsing configuration file {self.configuration_file}")
         with open(self.configuration_file,'rb') as f:
             self._config = tomllib.load(f)
@@ -158,45 +158,37 @@ class Configuration:
                     self.target = None
             except KeyError:
                 logger.error("Target not specified.")
-                print("Target was not specified on the command line, and no default target is set in the configuration file.")
-                sys.exit(1)
+                die("Target was not specified on the command line, and no default target is set in the configuration file.")
         # Do we still not know where the target is?
         if self.target is None:
             logger.error("Target isn't known.")
-            print("Target isn't known.")
-            sys.exit(1)
+            die("Target isn't known.")
         # OK, we have a target - is that valid?
         if self.target not in self._config['Target']:
             logger.error(f"Target {self.target} unknown.")
-            print(f"Target {self.target} not specified in the configuration file.")
-            sys.exit(1)
+            die(f"Target {self.target} not specified in the configuration file.")
         try:
             self.target_path = Path(self._config['Target'][self.target]['path'])
         except KeyError:
             logger.error(f"Target {self.target}: No path")
-            print(f"Target {self.target} doesn't specify the destination path.")
-            sys.exit(1)
+            die(f"Target {self.target} doesn't specify the destination path.")
         try:
             self.folder_structure = self._config['Target'][self.target]['folder_structure']
         except KeyError:
             logger.error(f"Target {self.target}: No folder_structure.")
-            print(f"Target {self.target} doesn't specify folder structure.")
-            sys.exit(1)
+            die(f"Target {self.target} doesn't specify folder structure.")
         if self.camera is None and ('default' not in self._config['Cameras'] or self._config['Cameras']['default'] == 'None'):
             logger.error("Camera unspecified.")
-            print("Camera was not specified on the command line, and no default camera is set in the configuration file.")
-            sys.exit(1)
+            die("Camera was not specified on the command line, and no default camera is set in the configuration file.")
         if self.camera not in self._config['Cameras']:
             logger.error("Camera {self.camera} unknown.")
-            print(f"Camera {self.camera} not specified in the configuration file.")
-            sys.exit(1)
+            die(f"Camera {self.camera} not specified in the configuration file.")
         camera_details = self._config['Cameras'][self.camera]
         if self.card is None and 'card' in camera_details:
             self.card = camera_details['card']
         if self.card is None:
             logger.error("Camera {self.camera}: No card.")
-            print(f"Camera {self.camera} has no default card and no card has been specified.")
-            sys.exit(1)
+            die(f"Camera {self.camera} has no default card and no card has been specified.")
         if 'card_label' in camera_details:
             self.card_label = camera_details['card_label']
         if 'ignore' in camera_details:
@@ -208,8 +200,7 @@ class Configuration:
             self.backup_path = Path(self._config['Target'][self.target]['backup_path'])
         except KeyError:
             logger.error("Target {self.target}: No backup_path.")
-            print("Backup path not specified for target {self.target} in the configuration file.")
-            sys.exit(1)
+            die("Backup path not specified for target {self.target} in the configuration file.")
         # Location of 7-Zip executable
         try:
             self.sevenzip_path = Path(self._config['Backup']['7zip_path'])
@@ -229,9 +220,8 @@ class Configuration:
         # TODO: first check that the card is inserted (needs OS trickery?)
         self.source_path = Path(self.card) / '/DCIM'
         if not self.source_path.exists():
-            print(f"Source card {self.card} does not have a DCIM folder.")
             logger.error(f"Source card {self.card} does not have a DCIM folder")
-            sys.exit(1)
+            die(f"Source card {self.card} does not have a DCIM folder.")
 
     def find_source_path_cloud(self):
         cloud_path = Path(self._config['Cloud'][self.card])
@@ -244,8 +234,7 @@ class Configuration:
         # Otherwise, I don't know what it is
         else:
             logger.error("Cloud source {self.card} folder {cloud_path} doesn't exist.")
-            print(f"The local sync folder of cloud service {self.card}, located at {cloud_path}, cannot be found.")
-            sys.exit(1)
+            die(f"The local sync folder of cloud service {self.card}, located at {cloud_path}, cannot be found.")
 
     def is_cloud_source(self):
         """Return True if the source is a cloud drive (i.e. found in Cloud
@@ -278,8 +267,7 @@ class Configuration:
     def validate(self):
         if not self.is_valid_config():
             logger.error("Configuration is not valid (something slipped through?)")
-            print("Configuration is not valid")
-            sys.exit(1)
+            die("Configuration is not valid")
 
     def is_converson_needed(self,path:Path) -> bool:
         """Will check if conversion is needed for a given file. Will return
