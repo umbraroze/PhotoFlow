@@ -38,6 +38,11 @@ def die(str:str,errcode:int=1):
     print(f"{Fore.RED}{Style.BRIGHT}{ICON_WARN}  {str}{Style.RESET_ALL}")
     sys.exit(errcode)
 
+def move_msg(source:str,destination:str):
+    print(f"{source} {ICON_TO}  {destination}")
+def convert_msg(source:str,destination:str):
+    print(f"[Convert] {source} {ICON_TO}  {destination}")
+
 # \uFE0F will encourage emoji rendering
 ICON_TO = "\u27A1\uFE0F"
 ICON_WARN = "\u26A0\uFE0F" 

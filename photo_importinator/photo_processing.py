@@ -11,6 +11,7 @@ import datetime
 from pathlib import Path
 import exiv2
 from dazzle import *
+from colorama import Fore, Back, Style
 from configuration import Configuration
 from dataclasses import dataclass
 import time
@@ -79,6 +80,7 @@ class MoveTask(Task):
 
     source_file:Path = None
     target_file:Path = None
+    pertinent_date:datetime = None
     file_type:str = None
     convert:bool = False
     dry_run:bool = False
@@ -86,11 +88,12 @@ class MoveTask(Task):
     leave_originals:bool = False
     dnglab_path:Path = None
     dnglab_flags:list = None
-    def __init__(self,configuration:Configuration,source_file:Path,target_file:Path):
+    def __init__(self,configuration:Configuration,source_file:Path,target_file:Path,pertinent_date:datetime=None):
         # Note: configuration is only read, not stored.
         # TODO: Is it really such a bad thing not to store the configuration locally?
         self.source_file = source_file
         self.target_file = target_file
+        self.pertinent_date = pertinent_date
         self.file_type = identify_file(source_file)
         self.convert = configuration.is_converson_needed(source_file)
         self.skip_import = configuration.skip_import
@@ -106,19 +109,19 @@ class MoveTask(Task):
         """Will either move the file to target folder, or copy it,
         depending on whether we want to leave the originals."""
         # TODO: Error checking?
+        move_msg(self.source_file,self.target_file)
         if self.leave_originals:                
             shutil.copy(self.source_file,self.target_file)
             logger.info(f"Copied: {self.source_file} to {self.target_file}")
         else:
             shutil.move(self.source_file,self.target_file)
             logger.info(f"Moved: {self.source_file} to {self.target_file}")
-        print(f"{self.source_file} {ICON_TO}  {self.target_file}")
         self.status = Task.Status.DONE
 
     def _convert(self):
         """Convert the raw file using dnglab and remove the original
         (if desired)."""
-        print(f"[Convert] {self.source_file} {ICON_TO}  {self.target_file}")
+        convert_msg(self.source_file,self.target_file)
         logger.info(f"Converting: {self.source_file} to {self.target_file}")
         self.status = Task.Status.RUNNING
 
@@ -231,9 +234,12 @@ def read_date(file:Path) -> datetime.datetime:
 
 class ImportQueue:
     """The main photo import queue."""
+
     _config:Configuration = None
     _jobs:list = []
-    _target_directories:dict = {}
+
+    day_counts:dict = {}
+    status_counts:dict = {}
 
     def __init__(self,configuration:Configuration):
         """Create the import queue."""
@@ -268,39 +274,51 @@ class ImportQueue:
                         logger.warning(f"File {fqfile} cannot be read by Exiv2. Skipping.")
                         skip_warn(f"Date for {fqfile} cannot be read. Skipping.")
                         continue
-                    datef = date.strftime("%Y-%m-%d")
                     # Figure out target directory and file name.
                     target_dir = self._config.target_path / self._config.date_to_path(date)
                     target_file = target_dir / file
-                    # Count the files for each directory.
-                    # FIXME: This seems to bug out sometimes?
-                    if datef not in self._target_directories:
-                        self._target_directories[datef] = {
-                            'directory': target_dir,
-                            'count': 0
-                        }
-                    else:
-                        self._target_directories[datef]['count'] += 1
                     # Create the actual move task and put it in the queue.
-                    task = MoveTask(self._config,fqfile,target_file)
+                    task = MoveTask(self._config,fqfile,target_file,date)
                     self._jobs.append(task)
 
-    def print_status(self):
-        """Print out the current status of job queue and statistics."""
-        job_cnt = len(self._jobs)
-        status_cnt = {}
+    
+    def update_stats(self):
+        """Recalculate job queue statistics."""
+        self.day_counts = {}
+        self.status_counts = {}
         for job in self._jobs:
-            if job.status in status_cnt:
-                status_cnt[job.status] += 1
+            # Update status counts.
+            if job.status not in self.status_counts:
+                self.status_counts[job.status] = 1
             else:
-                status_cnt[job.status] = 1
+                self.status_counts[job.status] += 1
+            # Update day count.
+            if job is MoveTask and job.pertinent_date is not None:
+                date = job.pertinent_date.strftine("%Y-%m-%d")
+                if date not in self.day_counts:
+                    self.day_counts[date] = 1
+                else:
+                    self.day_counts[date] += 1
+    def print_status_counts(self):
+        """Prints out queue status statistics."""
+        print(f"\n{Style.BRIGHT}Statuses:{Style.RESET_ALL}")
+        for s in self.status_counts.keys():
+            print(f" - {s}: {self.status_counts[s]}")
+    def print_day_counts(self):
+        """Prints out daily counts of jobs per the pertinent date."""
+        print(f"\n{Style.BRIGHT}Day summary:{Style.RESET_ALL}")
+        for d in self.day_counts.keys():
+            print(f" - {d}, {self.day_counts[d]} images")
+
+    def print_status(self):
+        """Print out the current status of job queue and statistics.
+        Will refresh statistics."""
+        print_boxed_text("Queue Statistics")
+        self.update_stats()
+        job_cnt = len(self._jobs)        
         print(f"{job_cnt} jobs queued.")
-        print("Statuses:")
-        for s in status_cnt.keys():
-            print(f" - {s}: {status_cnt[s]}")
-        print("Day summary:")
-        for d in self._target_directories.keys():
-            print(f" - {d}, {self._target_directories[d]['count']} images")
+        self.print_status_counts()
+        self.print_day_counts()
 
     def run(self):
         """Run all of the tasks in the queue."""
