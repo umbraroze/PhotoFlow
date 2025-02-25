@@ -293,8 +293,8 @@ class ImportQueue:
             else:
                 self.status_counts[job.status] += 1
             # Update day count.
-            if job is MoveTask and job.pertinent_date is not None:
-                date = job.pertinent_date.strftine("%Y-%m-%d")
+            if type(job) is MoveTask and job.pertinent_date is not None:
+                date = job.pertinent_date.strftime("%Y-%m-%d")
                 if date not in self.day_counts:
                     self.day_counts[date] = 1
                 else:
@@ -307,7 +307,7 @@ class ImportQueue:
     def print_day_counts(self):
         """Prints out daily counts of jobs per the pertinent date."""
         print(f"\n{Style.BRIGHT}Day summary:{Style.RESET_ALL}")
-        for d in self.day_counts.keys():
+        for d in sorted(self.day_counts.keys()):
             print(f" - {d}, {self.day_counts[d]} images")
 
     def print_status(self):
