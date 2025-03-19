@@ -69,15 +69,26 @@ class Configuration:
         return True
 
     @staticmethod
-    def default_configuration_path() -> Path:
-        """Returns the default configuration file location."""
+    def default_configuration_path_for(file:Path) -> Path:
+        """Returns the path for a specified file in the default configuration directory."""
         if platform.system() == 'Windows':
-            return Path.home() / 'AppData/Local/photo_importinator/photo_importinator_config.toml'
+            return Path.home() / 'AppData/Local/photo_importinator' / file
         else:
             try:
-                return Path(os.environ['XDG_CONFIG_HOME']) / "photo_importinator/photo_importinator_config.toml"
+                return Path(os.environ['XDG_CONFIG_HOME']) / "photo_importinator" / file
             except KeyError:
-                return Path.home() / '.config/photo_importinator/photo_importinator_config.toml'
+                return Path.home() / '.config/photo_importinator' / file
+    
+
+    @staticmethod
+    def default_configuration_path() -> Path:
+        """Returns the default configuration file location."""
+        return Configuration.default_configuration_path_for('photo_importinator_config.toml')
+    
+    @staticmethod
+    def default_running_stats_path() -> Path:
+        """Returns the default running stats storage location."""
+        return Configuration.default_configuration_path_for('photo_importinator_running_stats.db')
 
     def date_to_filename(self) -> str:
         """Returns the desired datestamp in ISO format suitable for file names."""
