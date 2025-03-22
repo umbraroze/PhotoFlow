@@ -22,12 +22,17 @@ class RunningStats:
     Note: This implementation is pretty naive and not thread-safe in the slightest.
     Use only one running stats collector."""
 
+    # All-time stats. These are stored on the disk.
     stats: dict = None
+    # Stats for current session. Not stored.
+    session_stats: dict = None
+    # Database file.
     db_file: Path = None
 
     def __init__(self,config:Configuration):
-        self.db_file = config.default_running_stats_path()
+        self.db_file = config.running_stats_path()
         self.load()
+        self.session_stats = {}
 
     def load(self):
         try:
@@ -45,9 +50,18 @@ class RunningStats:
             self.stats[day] += 1
         else:
             self.stats[day] = 1
+        if day in self.session_stats:
+            self.session_stats[day] += 1
+        else:
+            self.session_stats[day] = 1
+
+    def print_session_stats(self):
+        for d in sorted(self.session_stats.keys()):
+            day = d.strftime("%Y-%m-%d")
+            print(f" - {day}, {self.session_stats[d]} images")
 
     def save(self):
         f = open(self.db_file,'wb')
         pickle.dump(self.stats,f)
         f.close()
-        logger.info(f"Running counts saved to {self.db_file}")
+        logger.debug(f"Running counts saved to {self.db_file}")

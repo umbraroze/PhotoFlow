@@ -237,7 +237,7 @@ class ImportQueue:
     """The main photo import queue."""
 
     _config:Configuration = None
-    _running_stats:RunningStats = None
+    running_stats:RunningStats = None
     _jobs:list = []
 
     day_counts:dict = {}
@@ -246,7 +246,7 @@ class ImportQueue:
     def __init__(self,configuration:Configuration):
         """Create the import queue."""
         self._config = configuration
-        self._running_stats = RunningStats(self._config)
+        self.running_stats = RunningStats(self._config)
 
     def populate(self):
         """Populates the job queue. Will walk the source folder, create tasks, and add them to the queue."""
@@ -297,13 +297,8 @@ class ImportQueue:
                 self.status_counts[job.status] += 1
             # Update day count.
             if type(job) is MoveTask and job.pertinent_date is not None:
-                self._running_stats.increment_day(job.pertinent_date.date())
-                date = job.pertinent_date.strftime("%Y-%m-%d")
-                if date not in self.day_counts:
-                    self.day_counts[date] = 1
-                else:
-                    self.day_counts[date] += 1
-        self._running_stats.save()
+                self.running_stats.increment_day(job.pertinent_date.date())
+        self.running_stats.save()
     def print_status_counts(self):
         """Prints out queue status statistics."""
         print(f"\n{Style.BRIGHT}Statuses:{Style.RESET_ALL}")
@@ -312,8 +307,7 @@ class ImportQueue:
     def print_day_counts(self):
         """Prints out daily counts of jobs per the pertinent date."""
         print(f"\n{Style.BRIGHT}Day summary:{Style.RESET_ALL}")
-        for d in sorted(self.day_counts.keys()):
-            print(f" - {d}, {self.day_counts[d]} images")
+        self.running_stats.print_session_stats()
 
     def print_status(self):
         """Print out the current status of job queue and statistics.

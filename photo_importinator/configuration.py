@@ -90,6 +90,10 @@ class Configuration:
         """Returns the default running stats storage location."""
         return Configuration.default_configuration_path_for('photo_importinator_running_stats.db')
 
+    def running_stats_path(self) -> Path:
+        # TODO: Make this customisable in the settings.
+        return Configuration.default_running_stats_path()
+
     def date_to_filename(self) -> str:
         """Returns the desired datestamp in ISO format suitable for file names."""
         return self.date.strftime('%Y%m%d')
