@@ -15,6 +15,7 @@ from colorama import Fore, Back, Style
 from configuration import Configuration
 from running_stats import RunningStats
 from dataclasses import dataclass
+from abc import ABC, abstractmethod
 import time
 from enum import Enum
 import logging
@@ -26,8 +27,10 @@ logger = logging.getLogger(__name__)
 ###### Photo processing task #############################################
 
 @dataclass
-class Task:
+class Task(ABC):
+    """A task. Keeps track of the state of the process and stats. Must be subclassed."""
     class Status(Enum):
+        """Status of a task."""
         UNKNOWN = 0
         READY = 1
         RUNNING = 2
@@ -38,11 +41,15 @@ class Task:
     start_time:time = None
     end_time:time = None
     total_time:float = None
+
+    @abstractmethod
     def _execute(self):
-        raise RuntimeError("This task needs to be subclassed.") # More elegant way of handling this?
+        """Actual implementation of the task's execution."""
+        pass
+    
     def execute(self):
-        """Perform the task. Will perform the timekeeping for the task and
-        call the _execute method in subclass for the """
+        """Perform the task. This method will actually just perform the timekeeping
+        for the task; actual task is defined in the _execute method in the subclass."""
         self.start_time = time.time()
         self._execute()
         self.end_time = time.time()
@@ -51,6 +58,7 @@ class Task:
 # TODO: Ideally, the backup task should use the appropriate 7zip library (py7zr) for this task.
 @dataclass
 class BackupTask(Task):
+    """A task for performing backups. Will pack files from source folder to an archive file."""
     source: Path = None
     target: Path = None
     sevenzip_path: Path = None
@@ -76,8 +84,7 @@ class BackupTask(Task):
 
 @dataclass
 class MoveTask(Task):
-    """Task representing image moving or conversion. Keeps track of the
-    state of the process and stats."""
+    """Task representing image moving or conversion."""
 
     source_file:Path = None
     target_file:Path = None
@@ -238,7 +245,7 @@ class ImportQueue:
 
     _config:Configuration = None
     running_stats:RunningStats = None
-    _jobs:list = []
+    jobs:list = []
 
     day_counts:dict = {}
     status_counts:dict = {}
@@ -282,14 +289,14 @@ class ImportQueue:
                     target_file = target_dir / file
                     # Create the actual move task and put it in the queue.
                     task = MoveTask(self._config,fqfile,target_file,date)
-                    self._jobs.append(task)
+                    self.jobs.append(task)
 
     
     def update_stats(self):
         """Recalculate job queue statistics."""
         self.day_counts = {}
         self.status_counts = {}
-        for job in self._jobs:
+        for job in self.jobs:
             # Update status counts.
             if job.status not in self.status_counts:
                 self.status_counts[job.status] = 1
@@ -314,12 +321,12 @@ class ImportQueue:
         Will refresh statistics."""
         print_boxed_text("Queue Statistics")
         self.update_stats()
-        job_cnt = len(self._jobs)        
+        job_cnt = len(self.jobs)        
         print(f"{job_cnt} jobs queued.")
         self.print_status_counts()
         self.print_day_counts()
 
     def run(self):
         """Run all of the tasks in the queue."""
-        for job in self._jobs:
+        for job in self.jobs:
             job.execute()
