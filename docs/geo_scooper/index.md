@@ -27,13 +27,14 @@ You can then stick this KML file in any map visualisation tool
 you like (including [Google Earth Pro](https://www.google.com/earth/about/versions/#earth-pro)
 and [QGIS](https://www.qgis.org/).)
 
-## Examples
+## Example
 
-I'm sure there are a lot of creative uses you can use this
-software for, for example, to document and further illustrate
-your photo journeys.
+![GeoScooper in Oulu, Finland](geoscooping_in_oulu.png "GeoScooper in Oulu, Finland")
 
-Oh, you want *my* examples? ...They shall be coming eventually!
+Above, you can see *some* of my recent photography adventures
+in Oulu, Finland. Dot colours represent different years.
+Rendered in [QGIS](https://www.qgis.org/).
+Base map © [OpenStreetMap](https://www.openstreetmap.org/) contributors.
 
 ## Technology
 
