@@ -46,9 +46,8 @@ You may be asking why does this script exist at all.
 Despite this being such a necessary and ubiquitous part of
 photography workflow, and the fact that this feature also exists
 on many DAMs too, *it might not work the way you expect it to.*
-It's *surprisingly* easy to mess things up. I used
-Adobe Photoshop Elements Organizer for a while, and I don't
-want to relive that pain, thank you very much.
+It's *surprisingly* easy to mess things up.
+(The [history section](history.html) has a whole lot more ranting.)
 
 So, the aim is to minimise the user hassle and be flexible.
 
@@ -56,16 +55,17 @@ As a practical example: This is how I import images from my
 camera to my NAS. I stick the SD card on my computer, and type
 
 ```console
-> photo_importinator Nikon_D780
+> photo_importinator import Nikon_D780
 ```
 
-Simple, right?
+Simple, right? (Used to be that you could just enter the camera
+name, but now we have fancy subcommands.)
 
 But alas! Sometimes, Windows decides that the SD card should appear as `E:`
-instead. Oh no, what will I do now?! Why, never despair:
+instead. *Oh no, what will I do now?!* Why, never despair! Just do this:
 
 ```console
-> photo_importinator --card E: Nikon_D780
+> photo_importinator import --card E: Nikon_D780
 ```
 
 ...and on we go again!

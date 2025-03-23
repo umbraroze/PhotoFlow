@@ -59,7 +59,13 @@ And now whever I refer to my Nikon D780, I can just tell Photo Importinator
 "I want photos from `Nikon_D780`, please". Or:
 
 ```console
-> photo_importinator Nikon_D780
+> photo_importinator import Nikon_D780
+```
+
+Or:
+
+```console
+> photo_importinator i Nikon_D780
 ```
 
 No need to tell where the files come from (usually - Windows may sometimes use

@@ -21,6 +21,10 @@ logger = logging.getLogger(__name__)
 
 ###### Configuration #####################################################
 
+# TODO: possible candidates for cleaning up some of this stuff:
+#       pydantic-settings (https://docs.pydantic.dev/latest/concepts/pydantic_settings/)
+#       dynaconf (https://www.dynaconf.com/)
+
 @dataclass
 class Configuration:
     """Photo Importinator's configuration."""
@@ -28,6 +32,7 @@ class Configuration:
     class Action(Enum):
         IMPORT = 0
         LIST_CAMERAS_AND_TARGETS = 1
+        LIST_RUNNING_STATS = 2
 
     action: Action = Action.IMPORT
     _config: dict = None
@@ -79,7 +84,6 @@ class Configuration:
             except KeyError:
                 return Path.home() / '.config/photo_importinator' / file
     
-
     @staticmethod
     def default_configuration_path() -> Path:
         """Returns the default configuration file location."""
@@ -115,56 +119,76 @@ class Configuration:
         """Parses script command line arguments for Photo Importinator."""
         parser = argparse.ArgumentParser(
             prog='photo_importinator',
-            description='Move or convert photos from SD card or cloud to your photo server.')
+            description='Move or convert photos from SD card or cloud to your photo server.')        
+        subparsers = parser.add_subparsers(dest='command')
+
+        # Global arguments.
         parser.add_argument('-C','--configuration-file',default=Configuration.default_configuration_path(),
                             help=f"specify configuration file (default: {Configuration.default_configuration_path()})")
+
+        # Import subcommand and its arguments
+        parser_import_cmd = subparsers.add_parser('import',aliases=['i'],help='import from the specified camera.')
+
         # Target and destination specifications
-        parser.add_argument('-T','--target',default=None,help="specify target device (default: as set in config)")
-        parser.add_argument('-c','--card',default=None,help='card path/device (default: as per camera settings in config)')
-        parser.add_argument('--date',
-                            type=lambda d: datetime.datetime.strptime(d, '%Y-%m-%d').date(),
-                            default=datetime.date.today(),
-                            help="archive date stamp, YYYY-mm-dd (default: current date)")
+        parser_import_cmd.add_argument('-T','--target',default=None,help="specify target device (default: as set in config)")
+        parser_import_cmd.add_argument('-c','--card',default=None,help='card path/device (default: as per camera settings in config)')
+        parser_import_cmd.add_argument('--date',
+                                       type=lambda d: datetime.datetime.strptime(d, '%Y-%m-%d').date(),
+                                       default=datetime.date.today(),
+                                       help="archive date stamp, YYYY-mm-dd (default: current date)")
         # Skipping switches
-        parser.add_argument('--skip-backup',action='store_true',help="skip backup phase")
-        parser.add_argument('--skip-import',action='store_true',help="skip the final import phase")
-        parser.add_argument('--dry-run',action='store_true',help="do nothing, except explain what would be done")
-        parser.add_argument('--leave-originals',action='store_true',help="leave original files intact")
-        parser.add_argument('--overwrite-target',action='store_true',help="overwrite target files if found (default: just skip)")
-        # Camera
-        parser.add_argument('camera',default=None,nargs='?',help="camera name.")
-        # Done with setup, parse the arguments.
+        parser_import_cmd.add_argument('--skip-backup',action='store_true',help="skip backup phase")
+        parser_import_cmd.add_argument('--skip-import',action='store_true',help="skip the final import phase")
+        parser_import_cmd.add_argument('--dry-run',action='store_true',help="do nothing, except explain what would be done")
+        parser_import_cmd.add_argument('--leave-originals',action='store_true',help="leave original files intact")
+        parser_import_cmd.add_argument('--overwrite-target',action='store_true',help="overwrite target files if found (default: just skip)")
+        
+        # Camera name as the last positional argument for the import command.
+        parser_import_cmd.add_argument('camera',default=None,nargs='?',help="camera name.")
+
+        # Camera/target list subcommand and its arguments
+        parser_list_cmd = subparsers.add_parser('list',help='list cameras and targets.')
+
+        # Running stats subcommand and its arguments
+        parser_runningstats_cmd = subparsers.add_parser('runningstats',help='list running statistics of previous imports.')
+
+        # Done with the setup! Parse the arguments!
         args = parser.parse_args()
+
         # Populate the configuration object with parsed values
         self.configuration_file=args.configuration_file
-        self.target=args.target
-        self.card=args.card
-        self.date=args.date
-        self.skip_backup=args.skip_backup
-        self.skip_import=args.skip_import
-        self.dry_run=args.dry_run
-        self.leave_originals=args.leave_originals
-        self.camera=args.camera
-        if args.camera is not None and args.camera.lower() == 'list':
-            self.action = Configuration.Action.LIST_CAMERAS_AND_TARGETS
 
-    def parse_config_file(self):
-        """Reads and parses the configuration file, setting the relevant
-        fields. Will not overwrite the values if specified on command line.
-        Must only be called after command line arguments are parsed."""
+        # Find out what our subcommand is, set the relevant arguments.
+        if args.command in ['import','i']:
+            self.action = Configuration.Action.IMPORT
+            self.target=args.target
+            self.card=args.card
+            self.date=args.date
+            self.skip_backup=args.skip_backup
+            self.skip_import=args.skip_import
+            self.dry_run=args.dry_run
+            self.leave_originals=args.leave_originals
+            self.camera=args.camera
+        elif args.command in ['list']:
+            self.action = Configuration.Action.LIST_CAMERAS_AND_TARGETS
+        elif args.command in ['runningstats']:
+            self.action = Configuration.Action.LIST_RUNNING_STATS
+        else:
+            die(f"Unknown command {args.command}")
+
+    def read_configuration(self) -> dict:
         if not os.path.exists(self.configuration_file):
             logger.error("Configuration file {self.configuration_file} does not exist.")
             die(f"Configuration file {self.configuration_file} does not exist.")
         logger.info(f"Parsing configuration file {self.configuration_file}")
         with open(self.configuration_file,'rb') as f:
             self._config = tomllib.load(f)
-        # We now have the config file.
-        # Perform other actions besides IMPORT that don't require the config
-        # to actually be parsed. To wit, camera and target list.
-        # TODO: Doing this in middle of reading config file is kinda side-effecty?
-        if self.action == Configuration.Action.LIST_CAMERAS_AND_TARGETS:
-            self.list_cameras_and_targets()
-            sys.exit(0)
+
+    def parse_configuration(self):
+        """Parses the configuration file, setting the relevant
+        fields. Will not overwrite the values if specified on command line.
+        Must only be called after command line arguments are parsed and configuration file is read."""
+        
         # No target? Then figure out the default target
         if self.target is None:
             try:
@@ -276,8 +300,10 @@ class Configuration:
         """Read configuration. Do all of the relevant steps to ensure
         configuration is set correctly for the actual processing."""
         self.parse_command_line()
-        self.parse_config_file()
-        self.find_source_path()
+        self.read_configuration()
+        if self.action == Configuration.Action.IMPORT:
+            self.parse_configuration()
+            self.find_source_path()
 
     def validate(self):
         if not self.is_valid_config():

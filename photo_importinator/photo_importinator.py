@@ -9,6 +9,7 @@
 import colorama
 
 from configuration import Configuration
+from running_stats import RunningStats
 from dazzle import *
 from photo_processing import *
 
@@ -17,6 +18,46 @@ from photo_processing import *
 # https://docs.python.org/3/library/logging.html
 import logging
 logger = logging.getLogger(__name__)
+
+###### The import job ###################################################
+
+def importinate(config:Configuration):
+    # Print the banner and relevant settings
+    print_boxed_text("PHOTO IMPORTINATOR")
+
+    print_separator_line()
+    print(f"Settings file: {config.configuration_file}")
+    print_separator_line()
+    print(colorama.Style.BRIGHT+"Settings:"+colorama.Style.RESET_ALL)
+    print(f"Camera:        {config.camera}")
+    if config.is_cloud_source():
+        print(f"Cloud drive:   {ICON_CLOUD} {config.card}")
+    else:
+        print(f"Card:          {config.card}")
+    print(f"Backup folder: {config.backup_path}")
+    print(f"Destination:   {config.date_to_path_demo()}")
+    print_separator_line()
+
+    # Wait for user confirmation
+    try:
+        print("If information isn't correct, press Ctrl+C to abort.")
+        input("Press Return to continue: ")
+    except KeyboardInterrupt:
+        print("\nImport cancelled.")
+        return 1
+
+    # Create and run the backup task.
+    backuptask = BackupTask(config)
+    backuptask.execute()
+
+    # Create and run the import queue.
+    queue = ImportQueue(config)
+    queue.populate()
+    queue.run()
+
+    # Print out some final stats.
+    queue.print_status()
+    logger.debug('Import finished normally.')
 
 ###### Main program ######################################################
 
@@ -31,44 +72,22 @@ def main() -> int:
     
     # Parse command line options and configuration file, do all of the
     # necessary sanity checks as you go.
-    configuration = Configuration()
-    configuration.parse()
-    configuration.validate()
-
-    # Print the banner and relevant settings
-    print_boxed_text("PHOTO IMPORTINATOR")
-
-    print_separator_line()
-    print(f"Settings file: {configuration.configuration_file}")
-    print_separator_line()
-    print(colorama.Style.BRIGHT+"Settings:"+colorama.Style.RESET_ALL)
-    print(f"Camera:        {configuration.camera}")
-    if configuration.is_cloud_source():
-        print(f"Cloud drive:   {ICON_CLOUD} {configuration.card}")
-    else:
-        print(f"Card:          {configuration.card}")
-    print(f"Backup folder: {configuration.backup_path}")
-    print(f"Destination:   {configuration.date_to_path_demo()}")
-    print_separator_line()
-
-    # Wait for user confirmation
-    try:
-        print("If information isn't correct, press Ctrl+C to abort.")
-        input("Press Return to continue: ")
-    except KeyboardInterrupt:
-        print("\nImport cancelled.")
-        return 1
-
-    backuptask = BackupTask(configuration)
-    backuptask.execute()
-
-    queue = ImportQueue(configuration)
-    queue.populate()
-    queue.run()
-
-    queue.print_status()
-
-    logger.info('Photo Importinator finished normally.')
+    config = Configuration()
+    config.parse()
+    # Handle subcommands. Depending on what we do we need to either have
+    # a valid configuration or we must not actually validate the configuration.
+    if config.action == Configuration.Action.IMPORT:
+        # NOTE: NEED to validate config
+        config.validate()
+        importinate(config)
+    elif config.action == Configuration.Action.LIST_CAMERAS_AND_TARGETS:
+        # NOTE: MUST NOT validate config, actually.
+        config.list_cameras_and_targets()
+        sys.exit(0)
+    elif config.action == Configuration.Action.LIST_RUNNING_STATS:
+        running_stats = RunningStats(config)
+        running_stats.list_all()
+        sys.exit(0)
 
     return 0
 
