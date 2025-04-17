@@ -33,6 +33,8 @@ class Configuration:
         IMPORT = 0
         LIST_CAMERAS_AND_TARGETS = 1
         LIST_RUNNING_STATS = 2
+        PURGE_LOG_FILE = 3
+        PURGE_RUNNING_STATS = 4
 
     action: Action = Action.IMPORT
     _config: dict = None
@@ -152,6 +154,10 @@ class Configuration:
         # Running stats subcommand and its arguments
         parser_runningstats_cmd = subparsers.add_parser('runningstats',help='list running statistics of previous imports.')
 
+        # Purge command
+        purge_cmd = subparsers.add_parser('purge',help='Delete log file or running stats.')
+        purge_cmd.add_argument('to_be_purged',default=None,nargs='?',help="'log' or 'runningstats'")
+
         # Done with the setup! Parse the arguments!
         args = parser.parse_args()
 
@@ -173,6 +179,15 @@ class Configuration:
             self.action = Configuration.Action.LIST_CAMERAS_AND_TARGETS
         elif args.command in ['runningstats']:
             self.action = Configuration.Action.LIST_RUNNING_STATS
+        elif args.command in ['purge']:
+            if args.to_be_purged is None:
+                die("Unspecified purge target (must be 'log' or 'runningstats')")
+            elif args.to_be_purged == 'log':
+                self.action = Configuration.Action.PURGE_LOG_FILE
+            elif args.to_be_purged == 'runningstats':
+                self.action = Configuration.Action.PURGE_RUNNING_STATS
+            else:
+                die(f"Unknown purge target {args.to_be_purged}")
         else:
             die(f"Unknown command {args.command}")
 

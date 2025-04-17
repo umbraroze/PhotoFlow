@@ -7,6 +7,7 @@
 # for the full license terms.
 
 import colorama
+from pathlib import Path
 
 from configuration import Configuration
 from running_stats import RunningStats
@@ -64,7 +65,9 @@ def importinate(config:Configuration):
 def main() -> int:
     """Photo Importinator main program."""
 
-    logging.basicConfig(filename='photo_importinator.log', level=logging.INFO)
+    logfile = Path('photo_importinator.log')
+
+    logging.basicConfig(filename=logfile, level=logging.INFO)
     logger.info('Photo Importinator started.')
 
     # Initialise Colorama
@@ -88,6 +91,17 @@ def main() -> int:
         running_stats = RunningStats(config)
         running_stats.list_all()
         sys.exit(0)
+    elif config.action == Configuration.Action.PURGE_LOG_FILE:
+        logging.shutdown()
+        os.unlink(logfile)
+        print(f"Purged Photo Importinator log file {logfile.absolute()}")
+        sys.exit(0)
+    elif config.action == Configuration.Action.PURGE_RUNNING_STATS:
+        print(f"Would delete: {config.running_stats_path()}")
+        print("(Sorry, this is unimplemented, you just have to do it yourself for now)")
+        sys.exit(0)
+    else:
+        die(f"Unhandled action {config.action}")
 
     return 0
 
