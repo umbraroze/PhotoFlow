@@ -32,11 +32,8 @@ For Python modules, see the file
 [`requirements.txt`](requirements.txt) for a list of what's needed.
 You can install them with `pip install -r requirements.txt`.
 
-Some external software is needed to be installed - you need to
-specify the path to the executables in the configuration file.
-
-* [dnglab](https://github.com/dnglab/dnglab) (`dnglab`)
-* [7-Zip](https://www.7-zip.org/) (`7za`)
+You also need [dnglab](https://github.com/dnglab/dnglab) and usually need to
+specify its location in the configuration file.
 
 ## Configuration
 

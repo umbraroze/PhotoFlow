@@ -8,6 +8,28 @@ permalink: /photo_importinator/usage.html
 
 # Photo Importinator: Usage
 
+## Other software that is needed to run Photo Importinator
+
+### Python
+
+This is a [Python](https://www.python.org/) script, and it should work
+on a reasonably recent version of Python 3.
+
+Before you run the program, you can install dependencies by running
+`pip install -r requirements.txt`.
+
+### External software needed
+
+You need [dnglab][dnglab] for DNG conversion.
+
+In Linux, there's probably a prebuilt package somewhere and you just
+need to know the full path to the software along the lines of
+`/usr/bin/dnglab` or whatever.
+
+In Windows, dnglab, as of writing, has no installer. Stick `dnglab.exe`
+wherever you can find it, but you need to remember the path to the file
+and set it in the configuration file as seen below.
+
 ## Terminology and basic premise
 
 The Photo Importinator moves (or converts) files from a *source* to a *target*.
@@ -105,12 +127,10 @@ app before - that'd be quite weird, right?
 
 ```toml
 [Backup]
-7zip_path = 'C:/Program Files/7-Zip/7z.exe'
 ```
 
-This just specifies the path where your command-line
-7-Zip executable lives. (The default value is just where the
-64-bit Windows version lives.)
+This section is currently empty and may be omitted. We no longer
+need a 7-Zip executable path as we use Python library for that.
 
 #### Target
 
@@ -220,3 +240,4 @@ function photo_importinator {
 [DCIM]: https://en.wikipedia.org/wiki/Design_rule_for_Camera_File_system
 [pyformat]: https://cheatography.com/brianallan/cheat-sheets/python-f-strings-number-formatting/
 [xdg]: https://specifications.freedesktop.org/basedir-spec/latest/
+[dnglab]: https://github.com/dnglab/dnglab

@@ -6,6 +6,7 @@
 # Distributed under the MIT license. See the LICENSE file in parent folder
 # for the full license terms.
 
+import os, sys
 import colorama
 from pathlib import Path
 
@@ -14,9 +15,6 @@ from running_stats import RunningStats
 from dazzle import *
 from photo_processing import *
 
-
-# TODO: More extensive use of logging facility.
-# https://docs.python.org/3/library/logging.html
 import logging
 logger = logging.getLogger(__name__)
 

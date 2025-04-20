@@ -6,7 +6,8 @@
 # line with the -C or --configuration-file argument.
 
 [Backup]
-7zip_path = 'C:/Program Files/7-Zip/7z.exe'
+# Backup settings might go here; we used to have 7zip path here but we
+# now use a Python library instead.
 
 [Target]
 default = 'NAS-SERVER'

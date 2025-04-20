@@ -15,6 +15,12 @@ from configuration import Configuration
 
 logger = logging.getLogger(__name__)
 
+# TODO: Store daily photo count (date, count) information into an SQLite3
+#       database instead of Pickle
+# TODO: Running stats should also include import batches (date, camera, count)
+# TODO: Listing limits (recent X entries only, count for specific day)
+# TODO: Use dazzle
+
 class RunningStats:
     """Running stats collector. The running stats are pickled into a dict
     with date (datetime.date) as key and running count (int) as value.

@@ -21,10 +21,6 @@ logger = logging.getLogger(__name__)
 
 ###### Configuration #####################################################
 
-# TODO: possible candidates for cleaning up some of this stuff:
-#       pydantic-settings (https://docs.pydantic.dev/latest/concepts/pydantic_settings/)
-#       dynaconf (https://www.dynaconf.com/)
-
 @dataclass
 class Configuration:
     """Photo Importinator's configuration."""
@@ -55,7 +51,6 @@ class Configuration:
     ignore: list[str] = None
     convert_raw: list[str] = None
     backup_path: Path = None
-    sevenzip_path: Path = None
     dnglab_path: Path = None
     dnglab_flags: list = None
 
@@ -255,11 +250,6 @@ class Configuration:
         except KeyError:
             logger.error("Target {self.target}: No backup_path.")
             die("Backup path not specified for target {self.target} in the configuration file.")
-        # Location of 7-Zip executable
-        try:
-            self.sevenzip_path = Path(self._config['Backup']['7zip_path'])
-        except KeyError:
-            self.sevenzip_path = '7z' # Guess it's up to OS now to find this thing
         # Location of dnglab executable and the command line parameters
         try:
             self.dnglab_path = Path(self._config['Conversion']['dnglab_path'])

@@ -10,6 +10,7 @@ import os, sys
 import datetime
 from pathlib import Path
 import exiv2
+import py7zr
 from dazzle import *
 from colorama import Fore, Back, Style
 from configuration import Configuration
@@ -55,30 +56,25 @@ class Task(ABC):
         self.end_time = time.time()
         self.total_time = self.end_time - self.start_time
 
-# TODO: Ideally, the backup task should use the appropriate 7zip library (py7zr) for this task.
 @dataclass
 class BackupTask(Task):
     """A task for performing backups. Will pack files from source folder to an archive file."""
     source: Path = None
     target: Path = None
-    sevenzip_path: Path = None
     skip:bool = False
     def __init__(self,configuration:Configuration):
         if configuration.dry_run or configuration.skip_backup:
             self.skip = True
         self.target = configuration.backup_path / Path(f"{configuration.camera}_{configuration.date_to_filename()}.7z")
         self.source = configuration.source_path
-        self.sevenzip_path = configuration.sevenzip_path
     def _execute(self):
         if not self.skip:
-            logger.info(f"Start backup: {self.source} to {self.target}")
-            cmd = [self.sevenzip_path,'a','-t7z', '-r', self.target, self.source]
-            logger.info(f"Backup command: {cmd}")
-            subprocess.run(cmd)
-            # TODO: Error checking and status fudging.
+            logger.info(f"Backup: {self.source} to {self.target}")
+            with py7zr.SevenZipFile(self.target, 'w') as archive:
+                archive.writeall(self.source)
             self.status = Task.Status.DONE
         else:
-            logger.info(f"Backup skipped (would have archived {self.source} to {self.target})")
+            logger.info(f"Backup skipped: Would have archived {self.source} to {self.target}")
             skip_warn("Backup skipped.")
             self.status = Task.Status.SKIPPED
 
