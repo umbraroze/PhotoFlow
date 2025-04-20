@@ -95,8 +95,8 @@ def main() -> int:
         print(f"Purged Photo Importinator log file {logfile.absolute()}")
         sys.exit(0)
     elif config.action == Configuration.Action.PURGE_RUNNING_STATS:
-        print(f"Would delete: {config.running_stats_path()}")
-        print("(Sorry, this is unimplemented, you just have to do it yourself for now)")
+        os.unlink(config.running_stats_path())
+        print(f"Running stats file {config.running_stats_path()} removed, stats are now reset")
         sys.exit(0)
     else:
         die(f"Unhandled action {config.action}")
