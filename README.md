@@ -6,6 +6,12 @@ Many of the scripts were written for my personal use and are written
 with Windows in mind, but some of them could possibly work on other
 OSes.
 
+For extensive documentation, please see the
+[PhotoFlow website](https://umbraroze.github.io/PhotoFlow/).
+
+I jot down my new tool or expansion ideas in
+[Taiga.io](https://tree.taiga.io/project/umbraroze-photoflow/kanban).
+
 ## Photo Importinator
 
 (See the [`photo_importinator`](photo_importinator/) subdirectory)
