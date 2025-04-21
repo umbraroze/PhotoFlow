@@ -21,6 +21,13 @@ logger = logging.getLogger(__name__)
 
 ###### Configuration #####################################################
 
+# TODO: Allow pulling logfile path from an environment variable.
+# TODO: Or, just use tempfile library's NamedTempfile.
+#       https://docs.python.org/3/library/tempfile.html
+# TODO: Maybe default to home directory?
+def logfile_path() -> Path:
+    return Path('photo_importinator.log')
+
 @dataclass
 class Configuration:
     """Photo Importinator's configuration."""

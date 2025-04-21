@@ -10,7 +10,7 @@ import os, sys
 import colorama
 from pathlib import Path
 
-from configuration import Configuration
+from configuration import Configuration, logfile_path
 from running_stats import RunningStats
 from dazzle import *
 from photo_processing import *
@@ -63,9 +63,7 @@ def importinate(config:Configuration):
 def main() -> int:
     """Photo Importinator main program."""
 
-    logfile = Path('photo_importinator.log')
-
-    logging.basicConfig(filename=logfile, level=logging.INFO)
+    logging.basicConfig(filename=logfile_path(), level=logging.INFO)
     logger.info('Photo Importinator started.')
 
     # Initialise Colorama
