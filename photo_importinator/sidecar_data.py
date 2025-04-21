@@ -8,6 +8,7 @@
 
 from pathlib import Path
 import struct
+import construct
 
 def get_sidecar(file:Path) -> dict:
     """Decodes a camera-specific sidecar file."""
@@ -27,45 +28,64 @@ def get_sidecar_nikon_file_list(file:Path) -> dict:
     if file.name.upper() != 'NC_FLLST.DAT':
         raise ValueError("Tried to decode {file.name} and not a NC_FLLST.DAT file.")
     res = {}
-    #print(f"Loading {file}")
+
+    header_struct = construct.Struct(
+        "model" / construct.Int16ul,
+        construct.Padding(2),
+        "version" / construct.Int16ul,
+        construct.Padding(2),
+        # Note: on D780 file at least, entry_size and entry_count appear to be in opposite order of
+        # what the doc describes.
+        "entry_size" / construct.Int16ul,
+        "entry_count" / construct.Int16ul,
+        construct.Padding(2),
+    )
+    entry_struct = construct.BitStruct(
+        construct.Padding(2),
+        "slot" / construct.BitsInteger(1),
+        "folder" / construct.BitsInteger(10),
+        "file_no" / construct.BitsInteger(15),
+        "file_type" / construct.BitsInteger(4),
+        construct.Padding(24),
+        "rating" / construct.BitsInteger(8)
+    )
+
     with open(file,'rb') as f:
         # Read header
-        hdr_raw = f.read(16)
-        model = struct.unpack('<hh',hdr_raw[0:4])[0]
-        version = struct.unpack('<h',hdr_raw[4:6])[0]
-        #print(f"Model: 0x{model:04x} version: 0x{version:04x}")
-        # On D780 file, these appear to be in opposite order of
-        # what the doc describes.
-        entry_size = struct.unpack('<h',hdr_raw[8:10])[0]
-        entry_count = struct.unpack('<h',hdr_raw[10:12])[0]
-        #print(f"Contains {entry_count} entries of {entry_size} bytes")
-        for entry_idx in range(0,entry_count):
+        header_raw = f.read(16)
+        # Parse the header.
+        header = header_struct.parse(header_raw)
+
+        #print(f"Model: 0x{header.model:04x} ({header.model}) version: 0x{header.version:04x} ({header.version})")
+        #print(f"Contains {header.entry_count} entries of {header.entry_size} bytes")
+        for entry_idx in range(0,header.entry_count):
             # Store the decoded values here
             entry = {}
             # Read the entry
-            entry_raw = f.read(entry_size)
-            # FIXME: This is textual bit reading. Not the most elegant, I know.
-            # Extract the things as integers.
-            word1 = struct.unpack('<i',entry_raw[0:4])[0]
-            word2 = struct.unpack('<i',entry_raw[4:8])[0]
-            # Turn the thing into 32 bit binary number strings, zero padded.
-            word1 = f"{word1:032b}"
-            word2 = f"{word2:032b}"
-            # Grab the stuff from specified bit ranges and convert them back to
-            # integers.
+            entry_raw = f.read(header.entry_size)
+
+            # Construct can't handle little-endian integers in bitfields unless they're multiples of 8 bits.
+            # Decode the first two 32 bit (4 byte) words, then swap the endianness,
+            # and turn them to bytes again.
+            words = int.from_bytes(entry_raw[0:4],byteorder='little').to_bytes(4,byteorder='big') + \
+                int.from_bytes(entry_raw[4:8],byteorder='little').to_bytes(4,byteorder='big')
+            # Then parse the stuff.
+            entry_data = entry_struct.parse(words)
+
             entry = {
-                'slot': int(word1[0:3],base=2) + 1,
-                'folder': int(word1[3:13],base=2),
-                'file_no': int(int(word1[13:28],base=2) / 2),
-                'type': int(word1[28:],base=2),
-                'rating': int(word2[24:],base=2)
+                'slot': entry_data.slot+1,
+                'folder': entry_data.folder,
+                'file_no': entry_data.file_no >> 1,
+                'file_type': entry_data.file_type,
+                'rating_raw': entry_data.rating
             }
             # Further decode the rating
-            match entry['rating']:
+            match entry_data.rating:
                 case 0x7F:
                     entry['rating'] = 'TRASH'
                 case 0x80:
-                    del(entry['rating'])
+                    if 'rating' in entry:
+                        del(entry['rating'])
                 case 0x81:
                     entry['rating'] = 1
                 case 0x82:
@@ -80,3 +100,29 @@ def get_sidecar_nikon_file_list(file:Path) -> dict:
             filename = f"DSC_{entry['file_no']}"
             res[filename] = entry
     return res
+
+
+def nikon_very_silly_parse(raw:bytes) -> dict:
+    """Parse a Nikon NC_FLLST.DAT entry with a kinda silly method that works. If it's stupid and it works, it's not stupid."""
+    # Extract the things as integers.
+    word1 = struct.unpack('<i',raw[0:4])[0]
+    word2 = struct.unpack('<i',raw[4:8])[0]
+    # Turn the thing into 32 bit binary number strings, zero padded.
+    word1 = f"{word1:032b}"
+    word2 = f"{word2:032b}"
+    # Grab the stuff from specified bit ranges and convert them back to
+    # integers.
+    return {
+        'rawbits': {
+            'slot': word1[0:3],
+            'folder': word1[3:13],
+            'file_no': word1[13:28],
+            'file_type': word1[28:],
+            'rating': word2[24:]
+        },
+        'slot': int(word1[0:3],base=2) + 1,
+        'folder': int(word1[3:13],base=2),
+        'file_no': int(int(word1[13:28],base=2) / 2),
+        'file_type': int(word1[28:],base=2),
+        'rating': int(word2[24:],base=2)
+    }
