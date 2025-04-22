@@ -1,4 +1,17 @@
+# PyPi requirements.
+# To install: pip install -r requirements.txt
+
+# Good ol' ANSI.SYS action and some emoji are needed to
+# spice up the output. The old meets the new. How are you
+# fellow kids. Am I doing this right.
 colorama
+emoji
+
+# exiv2 is used to parse image data
 exiv2
+
+# py7zr is used to create 7-Zip archives for backups
 py7zr
+
+# Parse sidecar binary files
 construct

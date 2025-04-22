@@ -8,6 +8,7 @@
 
 import sys
 from colorama import Fore, Back, Style
+import emoji
 
 def print_separator_line():
     print(Fore.CYAN + "\u2500"*70 + Style.RESET_ALL)
@@ -44,7 +45,7 @@ def convert_msg(source:str,destination:str):
     print(f"[Convert] {source} {ICON_TO}  {destination}")
 
 # \uFE0F will encourage emoji rendering
-ICON_TO = "\u27A1\uFE0F"
-ICON_WARN = "\u26A0\uFE0F" 
-ICON_SKIP = "\u274E\uFE0F"
-ICON_CLOUD = "\u2601\uFE0F"
+ICON_TO = emoji.emojize(':right_arrow:',variant='emoji_type')
+ICON_WARN = emoji.emojize(':warning:',variant='emoji_type')
+ICON_SKIP = emoji.emojize(':cross_mark_button:',variant='emoji_type') 
+ICON_CLOUD = emoji.emojize(':cloud:',variant='emoji_type')
