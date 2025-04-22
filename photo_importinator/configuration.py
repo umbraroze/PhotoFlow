@@ -21,12 +21,17 @@ logger = logging.getLogger(__name__)
 
 ###### Configuration #####################################################
 
-# TODO: Allow pulling logfile path from an environment variable.
-# TODO: Or, just use tempfile library's NamedTempfile.
+# Logfile location pretty much needs to be known before CLI and
+# config file are loaded, so it has to be at a known location.
+# TODO: Maybe just use tempfile library's NamedTempfile.
 #       https://docs.python.org/3/library/tempfile.html
-# TODO: Maybe default to home directory?
 def logfile_path() -> Path:
-    return Path('photo_importinator.log')
+    """Get the Photo Importinator log file location. By default, the log file is
+    `photo_importinator.log` in user's home directory. It can be specified with
+    the environment variable `PHOTO_IMPORTINATOR_LOGFILE`."""
+    if 'PHOTO_IMPORTINATOR_LOGFILE' in os.environ:
+        return Path(os.environ['PHOTO_IMPORTINATOR_LOGFILE'])
+    return Path.home() / 'photo_importinator.log'
 
 @dataclass
 class Configuration:

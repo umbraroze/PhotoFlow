@@ -89,8 +89,8 @@ def main() -> int:
         sys.exit(0)
     elif config.action == Configuration.Action.PURGE_LOG_FILE:
         logging.shutdown()
-        os.unlink(logfile)
-        print(f"Purged Photo Importinator log file {logfile.absolute()}")
+        os.unlink(logfile_path())
+        print(f"Purged Photo Importinator log file {logfile_path().absolute()}")
         sys.exit(0)
     elif config.action == Configuration.Action.PURGE_RUNNING_STATS:
         os.unlink(config.running_stats_path())
