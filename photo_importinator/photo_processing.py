@@ -25,6 +25,78 @@ import shutil
 
 logger = logging.getLogger(__name__)
 
+###### Utility functions #################################################
+
+def dng_suffix_for(file:Path) -> Path:
+    return file.parent / Path(file.stem + ".DNG")
+
+def identify_file(file:Path) -> str:
+    """Returns a normalised file identification."""
+    s = file.suffix[1:].upper()
+    match s:
+        case 'JPG' | 'JPEG' | 'JFIF':
+            return 'JPEG'
+        case _:
+            return s
+
+def read_date(file:Path) -> datetime.datetime:
+    """Reads the date for the specified image file. Will try to grab the
+    original date from EXIF, or failing that, file modification time."""
+    mtime = datetime.datetime.fromtimestamp(os.path.getmtime(file))
+    try:
+        img = exiv2.ImageFactory.open(str(file))
+    except exiv2.Exiv2Error:
+        return None
+    img.readMetadata()
+    img_data = img.exifData()
+    date_raw = img_data["Exif.Photo.DateTimeOriginal"].getValue()
+    if date_raw is None:
+        date = mtime
+    else:
+        try:
+            date = datetime.datetime.strptime(str(date_raw),'%Y:%m:%d %H:%M:%S')
+        except ValueError:
+            date = mtime
+    return date
+
+def fix_dng_rating_from_raw(source_raw:Path, target_dng:Path):
+    """Read XMP rating from specified Raw format image.
+    If the rating is present and isn't 0, save the rating to the
+    specified DNG format image.
+    This is to fix the rating not getting carried over during conversion
+    for some reason or other."""
+    if not source_raw.exists():
+        logger.info(f"DNG rating fix: source {source_raw} doesn't exist.")
+        return
+    if not target_dng.exists():
+        logger.info(f"DNG rating fix: target {target_dng} doesn't exist.")
+        return
+    try:
+        source_img = exiv2.ImageFactory.open(str(source_raw))
+    except exiv2.Exiv2Error:
+        logger.info(f"DNG rating fix: Opening source image {source_raw} for reading failed.")
+        return
+    try:
+        target_img = exiv2.ImageFactory.open(str(target_dng))
+    except exiv2.Exiv2Error:
+        logger.info(f"DNG rating fix: Opening targer image {target_dng} for reading failed.")
+        return
+    source_img.readMetadata()
+    target_img.readMetadata()
+    source_img_data = source_img.xmpData()
+    target_img_data = target_img.xmpData()
+    try:
+        rating = source_img_data["Xmp.xmp.Rating"].getValue()
+    except exiv2.Exiv2Error:
+        rating = 0
+    if rating != 0:
+        try:
+            target_img_data["Xmp.xmp.Rating"] = rating
+            target_img.writeMetadata()
+        except exiv2.Exiv2Error:
+            logger.info(f"DNG rating fix: Saving metadata to {target_dng} failed.")
+            warn(f"Copying rating from {source_raw} to {target_dng} failed.")
+
 ###### Photo processing task #############################################
 
 @dataclass
@@ -174,6 +246,8 @@ class MoveTask(Task):
             warn(f"dnglab reported an error. See log file. (Return code {result.returncode})")
             run_successfully = False
             self.status = Task.Status.FAILURE
+        # Fix the rating.
+        fix_dng_rating_from_raw(self.source_file,self.target_file)
         # If we failed to convert, delete the target file.
         if not run_successfully and self.target_file.exists():
             os.unlink(self.target_file)
@@ -204,37 +278,7 @@ class MoveTask(Task):
     def print_status(self):
         print(f"{self.source_file}\n  Format: {self.file_type} * Convert: {self.convert} * Dry run: {self.dry_run}\n  {ICON_TO}  {self.target_file}")
 
-def dng_suffix_for(file:Path) -> Path:
-    return file.parent / Path(file.stem + ".DNG")
-
-def identify_file(file:Path) -> str:
-    """Returns a normalised file identification."""
-    s = file.suffix[1:].upper()
-    match s:
-        case 'JPG' | 'JPEG' | 'JFIF':
-            return 'JPEG'
-        case _:
-            return s
-
-def read_date(file:Path) -> datetime.datetime:
-    """Reads the date for the specified image file. Will try to grab the
-    original date from EXIF, or failing that, file modification time."""
-    mtime = datetime.datetime.fromtimestamp(os.path.getmtime(file))
-    try:
-        img = exiv2.ImageFactory.open(str(file))
-    except exiv2.Exiv2Error:
-        return None
-    img.readMetadata()
-    img_data = img.exifData()
-    date_raw = img_data["Exif.Photo.DateTimeOriginal"].getValue()
-    if date_raw is None:
-        date = mtime
-    else:
-        try:
-            date = datetime.datetime.strptime(str(date_raw),'%Y:%m:%d %H:%M:%S')
-        except ValueError:
-            date = mtime
-    return date
+###### Import queue ######################################################
 
 class ImportQueue:
     """The main photo import queue."""
