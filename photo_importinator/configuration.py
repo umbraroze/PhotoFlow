@@ -15,6 +15,7 @@ from enum import Enum
 from pathlib import Path
 from dataclasses import dataclass
 import logging
+from colorama import Fore, Back, Style
 from dazzle import *
 
 logger = logging.getLogger(__name__)
@@ -43,8 +44,9 @@ class Configuration:
         LIST_RUNNING_STATS = 2
         PURGE_LOG_FILE = 3
         PURGE_RUNNING_STATS = 4
+        SCAN = 5
 
-    action: Action = Action.IMPORT
+    action: Action = None
     _config: dict = None
     configuration_file: Path = None
     target: str = None
@@ -65,21 +67,28 @@ class Configuration:
     backup_path: Path = None
     dnglab_path: Path = None
     dnglab_flags: list = None
+    report_output_file: Path = None
 
     def is_valid_config(self) -> bool:
         """Returns true if the current configuration contains no problematic
         settings."""
         # TODO: Other conditions here
         if self.camera is None:
+            logger.debug("Configuration validation failed: camera is unset")
             return False
         if self.source_path is None:
+            logger.debug("Configuration validation failed: source_path is unset")
             return False
         if self.target_path is None:
+            logger.debug("Configuration validation failed: target_path is unset")
             return False
         if self.folder_structure is None:
+            logger.debug("Configuration validation failed: folder_structure is unset")
             return False
         if self.backup_path is None:
+            logger.debug("Configuration validation failed: backup_path is unset")
             return False
+        logger.debug("Configuration validation succeeded")
         return True
 
     @staticmethod
@@ -136,34 +145,45 @@ class Configuration:
                             help=f"specify configuration file (default: {Configuration.default_configuration_path()})")
 
         # Import subcommand and its arguments
-        parser_import_cmd = subparsers.add_parser('import',aliases=['i'],help='import from the specified camera.')
+        import_cmd = subparsers.add_parser('import',aliases=['i'],help='import from the specified camera.')
 
         # Target and destination specifications
-        parser_import_cmd.add_argument('-T','--target',default=None,help="specify target device (default: as set in config)")
-        parser_import_cmd.add_argument('-c','--card',default=None,help='card path/device (default: as per camera settings in config)')
-        parser_import_cmd.add_argument('--date',
-                                       type=lambda d: datetime.datetime.strptime(d, '%Y-%m-%d').date(),
-                                       default=datetime.date.today(),
-                                       help="archive date stamp, YYYY-mm-dd (default: current date)")
+        import_cmd.add_argument('-T','--target',default=None,help="specify target device (default: as set in config)")
+        import_cmd.add_argument('-c','--card',default=None,help='card path/device (default: as per camera settings in config)')
+        import_cmd.add_argument('--date',
+                                type=lambda d: datetime.datetime.strptime(d, '%Y-%m-%d').date(),
+                                default=datetime.date.today(),
+                                help="archive date stamp, YYYY-mm-dd (default: current date)")
         # Skipping switches
-        parser_import_cmd.add_argument('--skip-backup',action='store_true',help="skip backup phase")
-        parser_import_cmd.add_argument('--skip-import',action='store_true',help="skip the final import phase")
-        parser_import_cmd.add_argument('--dry-run',action='store_true',help="do nothing, except explain what would be done")
-        parser_import_cmd.add_argument('--leave-originals',action='store_true',help="leave original files intact")
-        parser_import_cmd.add_argument('--overwrite-target',action='store_true',help="overwrite target files if found (default: just skip)")
+        import_cmd.add_argument('--skip-backup',action='store_true',help="skip backup phase")
+        import_cmd.add_argument('--skip-import',action='store_true',help="skip the final import phase")
+        import_cmd.add_argument('--dry-run',action='store_true',help="do nothing, except explain what would be done")
+        import_cmd.add_argument('--leave-originals',action='store_true',help="leave original files intact")
+        import_cmd.add_argument('--overwrite-target',action='store_true',help="overwrite target files if found (default: just skip)")
         
         # Camera name as the last positional argument for the import command.
-        parser_import_cmd.add_argument('camera',default=None,nargs='?',help="camera name.")
+        import_cmd.add_argument('camera',default=None,nargs='?',help="camera name.")
 
         # Camera/target list subcommand and its arguments
-        parser_list_cmd = subparsers.add_parser('list',help='list cameras and targets.')
+        list_cmd = subparsers.add_parser('list',help='list cameras and targets.')
 
         # Running stats subcommand and its arguments
-        parser_runningstats_cmd = subparsers.add_parser('runningstats',help='list running statistics of previous imports.')
+        runningstats_cmd = subparsers.add_parser('runningstats',help='list running statistics of previous imports.')
 
         # Purge command
         purge_cmd = subparsers.add_parser('purge',help='Delete log file or running stats.')
         purge_cmd.add_argument('to_be_purged',default=None,nargs='?',help="'log' or 'runningstats'")
+
+        # Scan subcommand and its arguments
+        scan_cmd = subparsers.add_parser('scan',help='Examine source photos and produce a CSV-formatted import preview.')
+
+        # Target and destination specifications
+        scan_cmd.add_argument('-T','--target',default=None,help="specify target device (default: as set in config)")
+        scan_cmd.add_argument('-c','--card',default=None,help='card path/device (default: as per camera settings in config)')
+        
+        # Camera name as the last positional argument for the import command.
+        scan_cmd.add_argument('camera',default=None,nargs='?',help="camera name.")
+        scan_cmd.add_argument('report_output_file',default='scan_results.csv',nargs='?',help="output CSV file.")
 
         # Done with the setup! Parse the arguments!
         args = parser.parse_args()
@@ -195,6 +215,12 @@ class Configuration:
                 self.action = Configuration.Action.PURGE_RUNNING_STATS
             else:
                 die(f"Unknown purge target {args.to_be_purged}")
+        elif args.command in ['scan']:
+            self.action = Configuration.Action.SCAN
+            self.target=args.target
+            self.card=args.card
+            self.camera = args.camera
+            self.report_output_file=Path(args.report_output_file)
         else:
             die(f"Unknown command {args.command}")
 
@@ -318,9 +344,13 @@ class Configuration:
         configuration is set correctly for the actual processing."""
         self.parse_command_line()
         self.read_configuration()
-        if self.action == Configuration.Action.IMPORT:
-            self.parse_configuration()
-            self.find_source_path()
+        match self.action:
+            case Configuration.Action.IMPORT:
+                self.parse_configuration()
+                self.find_source_path()
+            case Configuration.Action.SCAN:
+                self.parse_configuration()
+                self.find_source_path()
 
     def validate(self):
         if not self.is_valid_config():
@@ -350,22 +380,24 @@ class Configuration:
             default_target = self._config['Target']['default']
         except KeyError:
             default_target = 'None'
-        print("\nCameras:")
+        print()
+        print_boxed_text("CAMERAS")
         for c in self._config['Cameras']:
             if c != 'default':
                 if c == default_camera:
-                    print(f" - {c} (default)")
+                    print(f" - {Fore.GREEN}{Style.BRIGHT}{c}{Style.RESET_ALL} (default)")
                 else:
                     print(f" - {c}")
         if default_camera == 'None':
-            print("   No default camera specified.")
-        print("\nTargets:")
+            print(f"   {Fore.YELLOW}{Style.BRIGHT}No default camera specified.{Style.RESET_ALL}")
+        print()
+        print_boxed_text("TARGETS")
         for t in self._config['Target']:
             if t != 'default':
                 if t == default_target:
-                    print(f" - {t} (default)")
+                    print(f" - {Fore.GREEN}{Style.BRIGHT}{t}{Style.RESET_ALL} (default)")
                 else:
                     print(f" - {t}")
         if default_target == 'None':
-            print("   No default target specified.")
+            print(f"   {Fore.YELLOW}{Style.BRIGHT}No default target specified.{Style.RESET_ALL}")
         logger.info("List of cameras and targets requested. Exiting.")

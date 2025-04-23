@@ -43,7 +43,7 @@ def importinate(config:Configuration):
         input("Press Return to continue: ")
     except KeyboardInterrupt:
         print("\nImport cancelled.")
-        return 1
+        sys.exit(0)
 
     # Create and run the backup task.
     backuptask = BackupTask(config)
@@ -58,12 +58,25 @@ def importinate(config:Configuration):
     queue.print_status()
     logger.debug('Import finished normally.')
 
+###### The scan job #####################################################
+
+def import_scan(config:Configuration):
+    print("Unimplemented")
+
 ###### Main program ######################################################
+
+# Useful values: logging.INFO or logging.DEBUG
+log_level = logging.INFO
+delete_old_log = True
 
 def main() -> int:
     """Photo Importinator main program."""
 
-    logging.basicConfig(filename=logfile_path(), level=logging.INFO)
+    # Delete old log if it exists
+    if delete_old_log and os.path.exists(logfile_path()):
+        os.unlink(logfile_path())
+    # Start logging
+    logging.basicConfig(level=log_level,filename=logfile_path())
     logger.info('Photo Importinator started.')
 
     # Initialise Colorama
@@ -76,27 +89,39 @@ def main() -> int:
     # Handle subcommands. Depending on what we do we need to either have
     # a valid configuration or we must not actually validate the configuration.
     if config.action == Configuration.Action.IMPORT:
+        logger.info('ACTION: Import')
         # NOTE: NEED to validate config
         config.validate()
         importinate(config)
+        sys.exit(0)
     elif config.action == Configuration.Action.LIST_CAMERAS_AND_TARGETS:
+        logger.info('ACTION: List Cameras and Targets')
         # NOTE: MUST NOT validate config, actually.
         config.list_cameras_and_targets()
         sys.exit(0)
     elif config.action == Configuration.Action.LIST_RUNNING_STATS:
+        logger.info('ACTION: List running stats')
         running_stats = RunningStats(config)
         running_stats.list_all()
         sys.exit(0)
     elif config.action == Configuration.Action.PURGE_LOG_FILE:
+        logger.info('ACTION: Purge log files') # :-(
         logging.shutdown()
         os.unlink(logfile_path())
         print(f"Purged Photo Importinator log file {logfile_path().absolute()}")
         sys.exit(0)
     elif config.action == Configuration.Action.PURGE_RUNNING_STATS:
+        logger.info('ACTION: Purge running stats')
         os.unlink(config.running_stats_path())
         print(f"Running stats file {config.running_stats_path()} removed, stats are now reset")
         sys.exit(0)
+    elif config.action == Configuration.Action.SCAN:
+        logger.info('ACTION: Scan')
+        config.validate()
+        import_scan(config)
+        sys.exit(0)
     else:
+        logger.error(f"ACTION: Unknown action {config.action}!")
         die(f"Unhandled action {config.action}")
 
     return 0
