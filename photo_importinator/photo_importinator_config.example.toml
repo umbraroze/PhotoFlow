@@ -35,9 +35,7 @@ default = 'None'
 [Cameras.Nikon_D780]
 card = 'D:'
 card_label = 'NIKON D780'
-sidecar = 'NC_FLLST.DAT'
-# Note: sidecar file, if present, will be ignored automatically.
-ignore = [ 'My_Contact_Information.txt' ]
+ignore = [ 'NC_FLLST.DAT' ]
 convert_raw = [ '.NEF' ]
 
 [Cameras.Nokia]
