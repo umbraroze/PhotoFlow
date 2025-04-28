@@ -142,8 +142,10 @@ class BackupTask(Task):
     def _execute(self):
         if not self.skip:
             logger.info(f"Backup: {self.source} to {self.target}")
+            print(f"Backing up from {self.source} to {self.target}...")
             with py7zr.SevenZipFile(self.target, 'w') as archive:
                 archive.writeall(self.source)
+            print(f"Done!")
             self.status = Task.Status.DONE
         else:
             logger.info(f"Backup skipped: Would have archived {self.source} to {self.target}")
@@ -343,7 +345,9 @@ class ImportQueue:
             else:
                 self.status_counts[job.status] += 1
             # Update day count.
-            if type(job) is MoveTask and job.pertinent_date is not None:
+            if type(job) is MoveTask \
+                and job.pertinent_date is not None \
+                and job.status == Task.Status.DONE:
                 self.running_stats.increment_day(job.pertinent_date.date())
         self.running_stats.save()
     def print_status_counts(self):
