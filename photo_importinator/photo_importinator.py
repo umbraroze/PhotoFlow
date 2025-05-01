@@ -6,7 +6,7 @@
 # Distributed under the MIT license. See the LICENSE file in parent folder
 # for the full license terms.
 
-import os, sys
+import os, sys, time, datetime
 import colorama
 from pathlib import Path
 
@@ -21,6 +21,8 @@ logger = logging.getLogger(__name__)
 ###### The import job ###################################################
 
 def importinate(config:Configuration):
+    start_time = time.time()
+    
     # Print the banner and relevant settings
     print_boxed_text("PHOTO IMPORTINATOR")
 
@@ -56,7 +58,12 @@ def importinate(config:Configuration):
 
     # Print out some final stats.
     queue.print_status()
-    logger.debug('Import finished normally.')
+
+    end_time = time.time()
+    total_time = str(datetime.timedelta(seconds=int(end_time-start_time)))
+    
+    print(f"\nTotal time: {total_time}")
+    logger.info(f'Import finished, total time: {total_time}')
 
 ###### The scan job #####################################################
 
