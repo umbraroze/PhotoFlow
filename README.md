@@ -37,6 +37,11 @@ visualising in GIS software of your choice.
 
 ## Other scripts
 
+* **Consecucheck**: Did you take five bazillion images? Did you
+  delete a few due to buttery fingers? Was it annoying to
+  look at the backup? This script will find out
+  if your image file sequence is indeed sequential or not!
+  (Yeah, kind of a niche utility tool.)
 * **Find Empty Day Folders**:
   This will go through NAS file hierarchy (YYYY/MM/DD) and looks
   for empty daily folders, allowing you to delete them.
