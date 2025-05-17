@@ -12,6 +12,3 @@ exiv2
 
 # py7zr is used to create 7-Zip archives for backups
 py7zr
-
-# Parse sidecar binary files
-construct
