@@ -201,6 +201,7 @@ class Configuration:
             self.skip_import=args.skip_import
             self.dry_run=args.dry_run
             self.leave_originals=args.leave_originals
+            self.overwrite_target=args.overwrite_target
             self.camera=args.camera
         elif args.command in ['list']:
             self.action = Configuration.Action.LIST_CAMERAS_AND_TARGETS

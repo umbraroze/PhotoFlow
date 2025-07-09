@@ -37,6 +37,16 @@ def importinate(config:Configuration):
         print(f"Card:          {config.card}")
     print(f"Backup folder: {config.backup_path}")
     print(f"Destination:   {config.date_to_path_demo()}")
+    if config.dry_run:
+        print(" - Dry run.")
+    if config.skip_backup:
+        print(" - Skipping backup.")
+    if config.skip_import:
+        print(" - Skipping import.")
+    if config.leave_originals:
+        print(" - Leaving original files.")
+    if config.overwrite_target:
+        print(" - Overwriting existing target files.")
     print_separator_line()
 
     # Wait for user confirmation

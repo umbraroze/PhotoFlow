@@ -164,6 +164,7 @@ class MoveTask(Task):
     dry_run:bool = False
     skip_import:bool = False
     leave_originals:bool = False
+    overwrite_target:bool = False
     dnglab_path:Path = None
     dnglab_flags:list = None
     def __init__(self,configuration:Configuration,source_file:Path,target_file:Path,pertinent_date:datetime=None):
@@ -177,6 +178,7 @@ class MoveTask(Task):
         self.skip_import = configuration.skip_import
         self.dry_run = configuration.dry_run
         self.leave_originals = configuration.leave_originals
+        self.overwrite_target = configuration.overwrite_target
         if self.convert:
             self.target_file = dng_suffix_for(self.target_file)
         self.status = Task.Status.READY
@@ -204,10 +206,14 @@ class MoveTask(Task):
         self.status = Task.Status.RUNNING
 
         if self.target_file.exists():
-            logger.info(f"{self.source_file} skipped, {self.target_file} exists.")
-            skip_warn(f"{self.source_file}: Target file {self.target_file} exists. Skipped.")
-            self.status = Task.Status.SKIPPED
-            return
+            if self.overwrite_target:
+                logger.debug(f"{self.source_file}: pre-existing target file {self.target_file} removed.")
+                os.unlink(self.target_file)
+            else:
+                logger.info(f"{self.source_file} skipped, {self.target_file} exists.")
+                skip_warn(f"{self.source_file}: Target file {self.target_file} exists. Skipped.")
+                self.status = Task.Status.SKIPPED
+                return
 
         # Come up with full command line invocation of dnglab, as a list.
         if self.dnglab_flags is not None:
