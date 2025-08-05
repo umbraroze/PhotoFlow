@@ -302,9 +302,13 @@ class Configuration:
     def find_source_path_card(self):
         # TODO: first check that the card is inserted (needs OS trickery?)
         self.source_path = Path(self.card) / '/DCIM'
-        if not self.source_path.exists():
-            logger.error(f"Source card {self.card} does not have a DCIM folder")
-            die(f"Source card {self.card} does not have a DCIM folder.")
+        try:
+            if not self.source_path.exists():
+                logger.error(f"Source card {self.card} does not have a DCIM folder")
+                die(f"Source card {self.card} does not have a DCIM folder.")
+        except OSError:
+            logger.error(f"Source card {self.card} not readable by the operating system.")
+            die(f"Source card {self.card} is not available.")
 
     def find_source_path_cloud(self):
         cloud_path = Path(self._config['Cloud'][self.card])
