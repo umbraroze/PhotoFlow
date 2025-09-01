@@ -110,6 +110,8 @@ class Task(ABC):
         DONE = 3
         SKIPPED = 4
         FAILURE = 5
+        def __str__(self):
+            return f'{self.name.capitalize()}'
     status:Status = Status.UNKNOWN
     start_time:time = None
     end_time:time = None
