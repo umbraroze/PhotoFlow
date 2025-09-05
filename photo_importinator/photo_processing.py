@@ -6,15 +6,10 @@
 # Distributed under the MIT license. See the LICENSE file in parent folder
 # for the full license terms.
 
+# Standard library
 import os, sys
 import datetime
 from pathlib import Path
-import exiv2
-import py7zr
-from dazzle import *
-from colorama import Fore, Back, Style
-from configuration import Configuration
-from running_stats import RunningStats
 from dataclasses import dataclass
 from abc import ABC, abstractmethod
 import time
@@ -22,6 +17,14 @@ from enum import Enum
 import logging
 import subprocess
 import shutil
+# PyPI
+import exiv2
+from colorama import Fore, Back, Style
+# Local
+from dazzle import *
+import archival
+from configuration import Configuration
+from running_stats import RunningStats
 
 logger = logging.getLogger(__name__)
 
@@ -101,7 +104,8 @@ def fix_dng_rating_from_raw(source_raw:Path, target_dng:Path):
 
 @dataclass
 class Task(ABC):
-    """A task. Keeps track of the state of the process and stats. Must be subclassed."""
+    """A (potentially parallelisable) task. Keeps track of the state of the
+    process and stats. Must be subclassed."""
     class Status(Enum):
         """Status of a task."""
         UNKNOWN = 0
@@ -145,8 +149,7 @@ class BackupTask(Task):
         if not self.skip:
             logger.info(f"Backup: {self.source} to {self.target}")
             print(f"Backing up from {self.source} to {self.target}...")
-            with py7zr.SevenZipFile(self.target, 'w') as archive:
-                archive.writeall(self.source)
+            archival.archive(self.source, self.target)
             print(f"Done!")
             self.status = Task.Status.DONE
         else:
