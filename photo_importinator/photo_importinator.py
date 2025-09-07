@@ -89,15 +89,15 @@ delete_old_log = True
 def main() -> int:
     """Photo Importinator main program."""
 
+    # Initialise fancypants terminal stuff
+    endazzle_terminal()
+
     # Delete old log if it exists
     if delete_old_log and os.path.exists(logfile_path()):
         os.unlink(logfile_path())
     # Start logging
     logging.basicConfig(level=log_level,filename=logfile_path())
     logger.info('Photo Importinator started.')
-
-    # Initialise Colorama
-    colorama.just_fix_windows_console()
     
     # Parse command line options and configuration file, do all of the
     # necessary sanity checks as you go.

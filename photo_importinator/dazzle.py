@@ -6,9 +6,19 @@
 # Distributed under the MIT license. See the LICENSE file in parent folder
 # for the full license terms.
 
+# Standard library
 import sys
-from colorama import Fore, Back, Style
+# PyPI
+from colorama import Fore, Back, Style, just_fix_windows_console
 import emoji
+import progressbar
+
+def endazzle_terminal():
+    """Initialise terminal window so that it can accept "fancy" output."""
+    # Initialise Colorama
+    just_fix_windows_console()
+    # Make sure progressbar magic can happen
+    progressbar.streams.wrap_stderr()
 
 def print_separator_line():
     print(Fore.CYAN + "\u2500"*70 + Style.RESET_ALL)
@@ -45,6 +55,7 @@ def convert_msg(source:str,destination:str):
     print(f"[Convert] {source} {ICON_TO}  {destination}")
 
 # \uFE0F will encourage emoji rendering
+ICON_DONE = emoji.emojize(':check_mark_button:',variant='emoji_type')
 ICON_TO = emoji.emojize(':right_arrow:',variant='emoji_type')
 ICON_WARN = emoji.emojize(':warning:',variant='emoji_type')
 ICON_SKIP = emoji.emojize(':cross_mark_button:',variant='emoji_type') 

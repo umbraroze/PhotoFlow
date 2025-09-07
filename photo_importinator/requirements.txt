@@ -1,11 +1,12 @@
 # PyPi requirements.
 # To install: pip install -r requirements.txt
 
-# Good ol' ANSI.SYS action and some emoji are needed to
-# spice up the output. The old meets the new. How are you
-# fellow kids. Am I doing this right.
+# Good ol' ANSI.SYS action, some emoji and fancy progress bars
+# are needed to spice up the output. The old meets the new.
+# How are you fellow kids. Am I doing this right.
 colorama
 emoji
+progressbar2
 
 # exiv2 is used to parse image data
 exiv2
