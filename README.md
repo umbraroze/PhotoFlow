@@ -9,9 +9,6 @@ OSes.
 For extensive documentation, please see the
 [PhotoFlow website](https://umbraroze.github.io/PhotoFlow/).
 
-I jot down my new tool or expansion ideas in
-[Taiga.io](https://tree.taiga.io/project/umbraroze-photoflow/kanban).
-
 ## Photo Importinator
 
 (See the [`photo_importinator`](photo_importinator/) subdirectory)
@@ -57,3 +54,16 @@ visualising in GIS software of your choice.
   sometimes spits out cryptic filenames when it can't figure out
   the original names. This will try to make the names more
   sensible and fix the datestamps based on metadata.
+
+# Further development directions and contributing
+
+If you somehow get really bright ideas on how to expand these,
+or have found a terrifying bug, please file an Issue!
+
+I *might* merge in well crafted Pull Requests, but expect me to
+*scrutinise* them. ...Nothing malicious, just saying it's probably
+going to take a long time.
+
+I currently don't use the Issue tracker to document whatever new
+expansion ideas I personally have; these are currently found in the
+Wiki page [Tasks](wiki/Tasks).
