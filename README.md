@@ -66,4 +66,4 @@ going to take a long time.
 
 I currently don't use the Issue tracker to document whatever new
 expansion ideas I personally have; these are currently found in the
-Wiki page [Tasks](wiki/Tasks).
+Wiki page [Tasks](https://github.com/umbraroze/PhotoFlow/wiki/Tasks).
