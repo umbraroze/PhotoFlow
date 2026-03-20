@@ -1,6 +1,11 @@
 source "https://rubygems.org"
-#gem "jekyll", "~> 4.2.2" # Actual version resolved via github-pages
-gem "minima", "~> 2.5"
+
+# JANK FIX - Needed for Jekyll
+gem "csv"
+gem "bigdecimal"
+gem "fiddle"
+
+#gem "jekyll", "~> 4.x.x" # Actual version resolved via github-pages
 group :jekyll_plugins do
   gem "jekyll-feed", "~> 0.12"
   gem "github-pages", "~> 228"

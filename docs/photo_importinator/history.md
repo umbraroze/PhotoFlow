@@ -171,9 +171,9 @@ Rather than doing *some* parts of the work with the script,
 at this point, I really wanted the script to do as many things
 as possible.
 
-You see, fundamentally, I'm a cheese-head. I can come up with a
-complicated process, but if I don't write it down, I'll just
-forget it. So it's better to just write a script that does as
+You see, fundamentally, I'm a [cheese-head][wikipedia-adhd]. I can
+come up with a complicated process, but if I don't write it down, I'll
+just forget it. So it's better to just write a script that does as
 much as possible, with as little instructions on my part as possible.
 "Import stuff from Camera X." Stuff like that.
 
@@ -241,3 +241,4 @@ serves me first.
 [digiKam]: https://www.digikam.org/
 [acdsee]: https://www.acdsee.com/
 [powerautomate]: https://www.microsoft.com/en-us/power-platform/products/power-automate
+[wikipedia-adhd]: https://en.wikipedia.org/wiki/Attention_deficit_hyperactivity_disorder
