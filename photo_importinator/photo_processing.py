@@ -179,7 +179,7 @@ class MoveTask(Task):
         self.target_file = target_file
         self.pertinent_date = pertinent_date
         self.file_type = identify_file(source_file)
-        self.convert = configuration.is_converson_needed(source_file)
+        self.convert = configuration.is_conversion_needed(source_file)
         self.skip_import = configuration.skip_import
         self.dry_run = configuration.dry_run
         self.leave_originals = configuration.leave_originals

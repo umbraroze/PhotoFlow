@@ -47,7 +47,7 @@ class Configuration:
         SCAN = 5
 
     action: Action = None
-    _config: dict = None
+    __config: dict = None
     configuration_file: Path = None
     target: str = None
     card: str = None
@@ -231,7 +231,7 @@ class Configuration:
             die(f"Configuration file {self.configuration_file} does not exist.")
         logger.info(f"Parsing configuration file {self.configuration_file}")
         with open(self.configuration_file,'rb') as f:
-            self._config = tomllib.load(f)
+            self.__config = tomllib.load(f)
 
     def parse_configuration(self):
         """Parses the configuration file, setting the relevant
@@ -241,7 +241,7 @@ class Configuration:
         # No target? Then figure out the default target
         if self.target is None:
             try:
-                self.target = self._config['Target']['default']
+                self.target = self.__config['Target']['default']
                 if self.target == 'None':
                     self.target = None
             except KeyError:
@@ -252,26 +252,26 @@ class Configuration:
             logger.error("Target isn't known.")
             die("Target isn't known.")
         # OK, we have a target - is that valid?
-        if self.target not in self._config['Target']:
+        if self.target not in self.__config['Target']:
             logger.error(f"Target {self.target} unknown.")
             die(f"Target {self.target} not specified in the configuration file.")
         try:
-            self.target_path = Path(self._config['Target'][self.target]['path'])
+            self.target_path = Path(self.__config['Target'][self.target]['path'])
         except KeyError:
             logger.error(f"Target {self.target}: No path")
             die(f"Target {self.target} doesn't specify the destination path.")
         try:
-            self.folder_structure = self._config['Target'][self.target]['folder_structure']
+            self.folder_structure = self.__config['Target'][self.target]['folder_structure']
         except KeyError:
             logger.error(f"Target {self.target}: No folder_structure.")
             die(f"Target {self.target} doesn't specify folder structure.")
-        if self.camera is None and ('default' not in self._config['Cameras'] or self._config['Cameras']['default'] == 'None'):
+        if self.camera is None and ('default' not in self.__config['Cameras'] or self.__config['Cameras']['default'] == 'None'):
             logger.error("Camera unspecified.")
             die("Camera was not specified on the command line, and no default camera is set in the configuration file.")
-        if self.camera not in self._config['Cameras']:
+        if self.camera not in self.__config['Cameras']:
             logger.error("Camera {self.camera} unknown.")
             die(f"Camera {self.camera} not specified in the configuration file.")
-        camera_details = self._config['Cameras'][self.camera]
+        camera_details = self.__config['Cameras'][self.camera]
         if self.card is None and 'card' in camera_details:
             self.card = camera_details['card']
         if self.card is None:
@@ -285,21 +285,22 @@ class Configuration:
             self.convert_raw = camera_details['convert_raw']
         # The directory where backups are stored
         try:
-            self.backup_path = Path(self._config['Target'][self.target]['backup_path'])
+            self.backup_path = Path(self.__config['Target'][self.target]['backup_path'])
         except KeyError:
             logger.error("Target {self.target}: No backup_path.")
             die("Backup path not specified for target {self.target} in the configuration file.")
         # Location of dnglab executable and the command line parameters
         try:
-            self.dnglab_path = Path(self._config['Conversion']['dnglab_path'])
+            self.dnglab_path = Path(self.__config['Conversion']['dnglab_path'])
         except KeyError:
             self.dnglab_path = 'dnglab'
         try:
-            self.dnglab_flags = self._config['Conversion']['convert_flags']
+            self.dnglab_flags = self.__config['Conversion']['convert_flags']
         except KeyError:
             self.dnglab_flags = None
 
-    def find_source_path_card(self):
+    def __find_source_path_card(self):
+        """Find source path for a card source."""
         # TODO: first check that the card is inserted (needs OS trickery?)
         self.source_path = Path(self.card) / '/DCIM'
         try:
@@ -310,8 +311,9 @@ class Configuration:
             logger.error(f"Source card {self.card} not readable by the operating system.")
             die(f"Source card {self.card} is not available.")
 
-    def find_source_path_cloud(self):
-        cloud_path = Path(self._config['Cloud'][self.card])
+    def __find_source_path_cloud(self):
+        """Find source path for a cloud drive source."""
+        cloud_path = Path(self.__config['Cloud'][self.card])
         # Is it a path relative to home?
         if os.path.exists(Path.home() / cloud_path):
             self.source_path = Path.home() / cloud_path
@@ -326,16 +328,28 @@ class Configuration:
     def is_cloud_source(self):
         """Return True if the source is a cloud drive (i.e. found in Cloud
         section of sources)"""
-        return (self.card in self._config['Cloud'])
+        return (self.card in self.__config['Cloud'])
 
     def find_source_path(self):
         """Find and set the source path based on selected source type."""
         if self.is_cloud_source():
-            self.find_source_path_cloud()    
+            self.__find_source_path_cloud()    
         else:
-            self.find_source_path_card()
+            self.__find_source_path_card()
 
     def get_source_folders(self) -> list:
+        """Get a list of folders containing the source files.
+
+        For cloud sources, returns a list with single path entry
+        with the cloud folder path.
+
+        For card sources, returns a list of subdirectories under
+        the source path (e.g. `.../DCIM/01FOO`, `.../DCIM/02FOO`.)"""
+
+        # TODO: Need to research what the original reason was for these
+        # to be split up this way. Why, indeed, DON'T I just use os.walk()
+        # for both types of sources?
+
         if self.is_cloud_source():
             return [self.source_path]
         else:
@@ -362,7 +376,7 @@ class Configuration:
             logger.error("Configuration is not valid (something slipped through?)")
             die("Configuration is not valid")
 
-    def is_converson_needed(self,path:Path) -> bool:
+    def is_conversion_needed(self,path:Path) -> bool:
         """Will check if conversion is needed for a given file. Will return
         True if the file suffix matches any of the suffixes given in
         chosen camera's convert_raw list."""
@@ -378,16 +392,16 @@ class Configuration:
         """Prints out valid cameras and targets. Only requres configuration
         file to be parsed."""
         try:
-            default_camera = self._config['Cameras']['default']
+            default_camera = self.__config['Cameras']['default']
         except KeyError:
             default_camera = 'None'
         try:
-            default_target = self._config['Target']['default']
+            default_target = self.__config['Target']['default']
         except KeyError:
             default_target = 'None'
         print()
         print_boxed_text("CAMERAS")
-        for c in self._config['Cameras']:
+        for c in self.__config['Cameras']:
             if c != 'default':
                 if c == default_camera:
                     print(f" - {Fore.GREEN}{Style.BRIGHT}{c}{Style.RESET_ALL} (default)")
@@ -397,7 +411,7 @@ class Configuration:
             print(f"   {Fore.YELLOW}{Style.BRIGHT}No default camera specified.{Style.RESET_ALL}")
         print()
         print_boxed_text("TARGETS")
-        for t in self._config['Target']:
+        for t in self.__config['Target']:
             if t != 'default':
                 if t == default_target:
                     print(f" - {Fore.GREEN}{Style.BRIGHT}{t}{Style.RESET_ALL} (default)")
