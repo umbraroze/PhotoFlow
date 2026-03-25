@@ -1,10 +1,10 @@
 #!/usr/bin/python3
 ##########################################################################
-#
 # Photo Geo Scooper
-# (c) Rose Midford 2023,2024
-# See LICENSE for terms of distribution
-#
+##########################################################################
+# (c) Rose Midford 2023,2024,2026
+# Distributed under the MIT license. See the LICENSE file in parent folder
+# for the full license terms.
 ##########################################################################
 
 # builtins
@@ -23,7 +23,8 @@ from diskcache import Cache
 
 ##########################################################################
 
-def make_extended_data(values):
+def make_extended_data(values: dict):
+    """Creates a KML ExtendedData tag structure from the dict of given values."""
     ed = KML.ExtendedData()
     for k in values.keys():
         d = KML.Data(name=k)
@@ -33,48 +34,79 @@ def make_extended_data(values):
     return ed
 
 def make_geo_timestamp(time,lat,lon):
+    """Creates a KML camera data time stamp with latitude and longitude."""
     return KML.Camera(
         GX.TimeStamp(KML.when(time)),
         KML.latitude(lat),
         KML.longitude(lon)
     )
 
-def parse_exif_date(date):
+def parse_exif_date(date: str) -> datetime:
+    """Parses Exif datestamp into a datetime structure.
+    Will return None if date cannot be parsed."""
     try:
         return datetime.datetime.strptime(str(date),'%Y:%m:%d %H:%M:%S')
     except ValueError:
         return None
 
-def parse_exif_rational(frac):
+def parse_exif_rational(frac: str) -> float:
+    """Parses a fraction given as a string and returns it as a float.
+    Will return 0.0 if either numerator or denominator is 0."""
     [(a,b)] = re.findall(r"(\d+)/(\d+)",frac)
     if a == "0" or b == "0":
         return 0.0
     return float(a)/float(b)
 
-def parse_exif_coords(lat,lon,lat_ref,lon_ref):
+def parse_exif_coords(lat: str, lon: str, lat_ref: str, lon_ref: str) -> tuple[float,float]:
+    """Parses Exif coordinates.
+    
+    In Exif data, both latitude and longitude are given as string with
+    three fractional values separated by spaces, representing
+    degrees, minutes and seconds. (e.g. "123/456 123/456 123/456")
+    Reference is given as a single chracter ('N','E','S','W').
+
+    This function will parse the fractional values and converts them
+    to a pair of signed float values, as used in KML files to
+    represent coordinates."""
+
+    # Parse latitude into fractions
     [(lat_deg_frac,lat_min_frac,lat_sec_frac)] = \
         re.findall(r"(\d+/\d+)\s+(\d+/\d+)\s+(\d+/\d+)",str(lat))
+    # Convert fractions into floats
     lat_deg, lat_min, lat_sec = \
         parse_exif_rational(lat_deg_frac), \
         parse_exif_rational(lat_min_frac), \
         parse_exif_rational(lat_sec_frac)
+    # Parse longitude into fractions
     [(lon_deg_frac,lon_min_frac,lon_sec_frac)] = \
         re.findall(r"(\d+/\d+)\s+(\d+/\d+)\s+(\d+/\d+)",str(lon))
+    # Convert fractions into floats
     lon_deg, lon_min, lon_sec = \
         parse_exif_rational(lon_deg_frac), \
         parse_exif_rational(lon_min_frac), \
         parse_exif_rational(lon_sec_frac)
 
+    # Convert latitude from degrees/minutes/seconds into a float.
     lat_d = float(lat_deg) + \
         (float(lat_min)*(1/60)) + \
         (float(lat_sec)*(1/60)*(1/60))
+    # If we're on southern hemisphere, flip the sign
     if str(lat_ref) == 'S':
         lat_d = -lat_d
+    # Sanity check.
+    if str(lat_ref) != 'N':
+        raise ValueError(f"Latitude reference {str(lat_ref)} is neither N or S")
+    # Convert longitude from degrees/minutes/seconds into a float.
     lon_d = float(lon_deg) + \
         (float(lon_min)*(1/60)) + \
         (float(lon_sec)*(1/60)*(1/60))
+    # If we're on western hemisphere, flip the sign
     if str(lon_ref) == 'W':
         lon_d = -lon_d
+    # Sanity check.
+    if str(lon_ref) != 'E':
+        raise ValueError(f"Longitude reference {str(lon_ref)} is neither W or E")
+    # And we have our values now!
     return (lat_d,lon_d)
 
 class SkippedFileException(Exception):
@@ -110,10 +142,10 @@ def read_exif(file):
     # FIXME later: ok, so value() works, but what the heck was up with getValue() above???
     try:
         lat, lon, lat_ref, lon_ref = \
-            data['Exif.GPSInfo.GPSLatitude'].value(), \
-            data['Exif.GPSInfo.GPSLongitude'].value(), \
-            data['Exif.GPSInfo.GPSLatitudeRef'].value(), \
-            data['Exif.GPSInfo.GPSLongitudeRef'].value()
+            str(data['Exif.GPSInfo.GPSLatitude'].value()), \
+            str(data['Exif.GPSInfo.GPSLongitude'].value()), \
+            str(data['Exif.GPSInfo.GPSLatitudeRef'].value()), \
+            str(data['Exif.GPSInfo.GPSLongitudeRef'].value())
         kml_lat, kml_lon = parse_exif_coords(lat, lon, lat_ref, lon_ref)
     except exiv2.Exiv2Error:
         if verbose_mode:
