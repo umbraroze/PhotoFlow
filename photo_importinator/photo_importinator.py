@@ -2,7 +2,7 @@
 ##########################################################################
 # Photo Importinator III: This Time It's Python For Some Reason
 ##########################################################################
-# (c) 2024,2025 Rose Midford.
+# (c) 2024,2025,2026 Rose Midford.
 # Distributed under the MIT license. See the LICENSE file in parent folder
 # for the full license terms.
 
@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 ###### The import job ###################################################
 
-def importinate(config:Configuration):
+def photo_import(config:Configuration):
     start_time = time.time()
     
     # Print the banner and relevant settings
@@ -58,8 +58,8 @@ def importinate(config:Configuration):
         sys.exit(0)
 
     # Create and run the backup task.
-    backuptask = BackupTask(config)
-    backuptask.execute()
+    backup_task = BackupTask(config)
+    backup_task.execute()
 
     # Create and run the import queue.
     queue = ImportQueue(config)
@@ -77,13 +77,13 @@ def importinate(config:Configuration):
 
 ###### The scan job #####################################################
 
-def import_scan(config:Configuration):
+def photo_scan(config:Configuration):
     print("Unimplemented")
 
 ###### Main program ######################################################
 
 # Useful values: logging.INFO or logging.DEBUG
-log_level = logging.INFO
+log_level = logging.DEBUG
 delete_old_log = True
 
 def main() -> int:
@@ -99,7 +99,7 @@ def main() -> int:
     logging.basicConfig(level=log_level,filename=logfile_path())
     logger.info('Photo Importinator started.')
     
-    # Parse command line options and configuration file, do all of the
+    # Parse command line options and configuration file, do all
     # necessary sanity checks as you go.
     config = Configuration()
     config.parse()
@@ -107,9 +107,8 @@ def main() -> int:
     # a valid configuration or we must not actually validate the configuration.
     if config.action == Configuration.Action.IMPORT:
         logger.info('ACTION: Import')
-        # NOTE: NEED to validate config
         config.validate()
-        importinate(config)
+        photo_import(config)
         sys.exit(0)
     elif config.action == Configuration.Action.LIST_CAMERAS_AND_TARGETS:
         logger.info('ACTION: List Cameras and Targets')
@@ -135,7 +134,12 @@ def main() -> int:
     elif config.action == Configuration.Action.SCAN:
         logger.info('ACTION: Scan')
         config.validate()
-        import_scan(config)
+        photo_scan(config)
+        sys.exit(0)
+    elif config.action == Configuration.Action.UNPACK:
+        logger.info('ACTION: Unpack')
+        config.validate()
+        archival.unpack_all(config)
         sys.exit(0)
     else:
         logger.error(f"ACTION: Unknown action {config.action}!")

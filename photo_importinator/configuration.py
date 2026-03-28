@@ -2,7 +2,7 @@
 ##########################################################################
 # Photo Importinator III: This Time It's Python For Some Reason
 ##########################################################################
-# (c) 2024,2025 Rose Midford.
+# (c) 2024,2025,2026 Rose Midford.
 # Distributed under the MIT license. See the LICENSE file in parent folder
 # for the full license terms.
 
@@ -16,6 +16,8 @@ from pathlib import Path
 from dataclasses import dataclass
 import logging
 from colorama import Fore, Back, Style
+from py7zr.archiveinfo import Folder
+
 from dazzle import *
 
 logger = logging.getLogger(__name__)
@@ -45,6 +47,7 @@ class Configuration:
         PURGE_LOG_FILE = 3
         PURGE_RUNNING_STATS = 4
         SCAN = 5
+        UNPACK = 6
 
     action: Action = None
     __config: dict = None
@@ -52,7 +55,7 @@ class Configuration:
     target: str = None
     card: str = None
     card_label: str = None
-    date: datetime = None
+    date: datetime.datetime = None
     skip_import: bool = False
     skip_backup: bool = False
     dry_run: bool = False
@@ -105,12 +108,12 @@ class Configuration:
     @staticmethod
     def default_configuration_path() -> Path:
         """Returns the default configuration file location."""
-        return Configuration.default_configuration_path_for('photo_importinator_config.toml')
+        return Configuration.default_configuration_path_for(Path('photo_importinator_config.toml'))
     
     @staticmethod
     def default_running_stats_path() -> Path:
         """Returns the default running stats storage location."""
-        return Configuration.default_configuration_path_for('photo_importinator_running_stats.db')
+        return Configuration.default_configuration_path_for(Path('photo_importinator_running_stats.db'))
 
     def running_stats_path(self) -> Path:
         # TODO: Make this customisable in the settings.
@@ -122,7 +125,7 @@ class Configuration:
     def date_to_str(self) -> str:
         """Returns the desired datestamp in ISO format."""
         return self.date.strftime('%Y-%m-%d')
-    def date_to_path(self,date:datetime) -> Path:
+    def date_to_path(self,date:datetime.datetime) -> Path:
         """Returns the directory structure for the given day."""
         d = date.date()
         return Path(self.folder_structure.format(year=d.year,month=d.month,day=d.day))
@@ -185,6 +188,21 @@ class Configuration:
         scan_cmd.add_argument('camera',default=None,nargs='?',help="camera name.")
         scan_cmd.add_argument('report_output_file',default='scan_results.csv',nargs='?',help="output CSV file.")
 
+        # Unpack command
+        unpack_cmd = subparsers.add_parser('unpack', help='unpack all archive files on specified cloud drive.')
+
+        # Target and destination specifications
+        unpack_cmd.add_argument('-c', '--card', default=None,
+                                help='card path/device (default: as per camera settings in config)')
+        # Skipping switches
+        unpack_cmd.add_argument('--dry-run', action='store_true', help="do nothing, except explain what would be done")
+        unpack_cmd.add_argument('--leave-originals', action='store_true', help="leave original files intact")
+        unpack_cmd.add_argument('--overwrite-target', action='store_true',
+                                help="overwrite target files if found (default: just skip)")
+
+        # Camera name as the last positional argument for the import command.
+        unpack_cmd.add_argument('camera', default=None, nargs='?', help="camera name.")
+
         # Done with the setup! Parse the arguments!
         args = parser.parse_args()
 
@@ -192,7 +210,10 @@ class Configuration:
         self.configuration_file=args.configuration_file
 
         # Find out what our subcommand is, set the relevant arguments.
-        if args.command in ['import','i']:
+        if args.command is None:
+            parser.print_help()
+            sys.exit(0)
+        elif args.command in ['import','i']:
             self.action = Configuration.Action.IMPORT
             self.target=args.target
             self.card=args.card
@@ -222,6 +243,13 @@ class Configuration:
             self.card=args.card
             self.camera = args.camera
             self.report_output_file=Path(args.report_output_file)
+        elif args.command in ['unpack']:
+            self.action = Configuration.Action.UNPACK
+            self.card=args.card
+            self.dry_run=args.dry_run
+            self.leave_originals=args.leave_originals
+            self.overwrite_target=args.overwrite_target
+            self.camera=args.camera
         else:
             die(f"Unknown command {args.command}")
 
@@ -293,7 +321,11 @@ class Configuration:
         try:
             self.dnglab_path = Path(self.__config['Conversion']['dnglab_path'])
         except KeyError:
-            self.dnglab_path = 'dnglab'
+            if platform.system() == 'Windows':
+                exe = 'dnglab.exe'
+            else:
+                exe = 'dnglab'
+            self.dnglab_path = Path(exe)
         try:
             self.dnglab_flags = self.__config['Conversion']['convert_flags']
         except KeyError:
@@ -310,6 +342,7 @@ class Configuration:
         except OSError:
             logger.error(f"Source card {self.card} not readable by the operating system.")
             die(f"Source card {self.card} is not available.")
+        logger.debug(f"Card source path found: {self.source_path}")
 
     def __find_source_path_cloud(self):
         """Find source path for a cloud drive source."""
@@ -322,13 +355,14 @@ class Configuration:
             self.source_path = cloud_path
         # Otherwise, I don't know what it is
         else:
-            logger.error("Cloud source {self.card} folder {cloud_path} doesn't exist.")
+            logger.error(f"Cloud source {self.card} folder {cloud_path} doesn't exist.")
             die(f"The local sync folder of cloud service {self.card}, located at {cloud_path}, cannot be found.")
+        logger.debug(f"Cloud source path found: {self.source_path}")
 
     def is_cloud_source(self):
         """Return True if the source is a cloud drive (i.e. found in Cloud
         section of sources)"""
-        return (self.card in self.__config['Cloud'])
+        return self.card in self.__config['Cloud']
 
     def find_source_path(self):
         """Find and set the source path based on selected source type."""
@@ -337,7 +371,7 @@ class Configuration:
         else:
             self.__find_source_path_card()
 
-    def get_source_folders(self) -> list:
+    def get_source_folders(self) -> list[Path]:
         """Get a list of folders containing the source files.
 
         For cloud sources, returns a list with single path entry
@@ -356,7 +390,7 @@ class Configuration:
             # Get all subdirectories of .source_path and prepend the actual source path.
             # Because os.listdir() doesn't return the prefixes.
             # TODO: Does this need more filtering? (Doesn't seem to be picking . and .. etc)
-            return map(lambda x: self.source_path / x, os.listdir(self.source_path))
+            return list(map(lambda x: self.source_path / x, os.listdir(self.source_path)))
 
     def parse(self):
         """Read configuration. Do all of the relevant steps to ensure
@@ -368,6 +402,9 @@ class Configuration:
                 self.parse_configuration()
                 self.find_source_path()
             case Configuration.Action.SCAN:
+                self.parse_configuration()
+                self.find_source_path()
+            case Configuration.Action.UNPACK:
                 self.parse_configuration()
                 self.find_source_path()
 

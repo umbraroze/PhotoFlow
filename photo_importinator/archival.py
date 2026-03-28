@@ -2,7 +2,7 @@
 ##########################################################################
 # Photo Importinator III: This Time It's Python For Some Reason
 ##########################################################################
-# (c) 2025 Rose Midford.
+# (c) 2025,2026 Rose Midford.
 # Distributed under the MIT license. See the LICENSE file in parent folder
 # for the full license terms.
 
@@ -12,10 +12,15 @@ from pathlib import Path
 import logging
 # PyPI
 import py7zr
+from numpy.f2py.crackfortran import sourcecodeform
+
 # Local
 from dazzle import *
+from configuration import Configuration
 
 logger = logging.getLogger(__name__)
+
+###### Creating backup archives ##########################################
 
 def archive(source:Path, target:Path):
     """Archive all files under `source` to 7-Zip file `target`.
@@ -56,6 +61,41 @@ def archive(source:Path, target:Path):
           f"{human_size(total_size)} bytes, " + \
           f"{human_size(arc_size)} compressed ({ratio:.2f}% of original)")
 
+###### Unarchiving task ##################################################
+
+def unpack_all(configuration:Configuration):
+    """Unarchive all .zip and .7z archives in the target card, per given configuration."""
+
+    # Sanity checks before proceeding
+    if not configuration.is_cloud_source():
+        logger.error(f"Unpack all: {configuration.camera} is not a cloud source")
+        die(f"{configuration.camera} is not a cloud source")
+
+    # Print the configuration
+    print_boxed_text("UNPACK")
+    print(f" - Camera: {configuration.camera}")
+    print(f" - Cloud drive: {ICON_CLOUD} {configuration.card}")
+    if configuration.dry_run:
+        print(" - Dry run")
+    if configuration.leave_originals:
+        print(" - Leave originals")
+    if configuration.overwrite_target:
+        print(" - Overwrite target files")
+    print()
+
+    # Go over each source folder
+    for source in configuration.get_source_folders():
+        print(f"Source folder: {source}")
+        if not source.is_dir():
+            logger.error(f"Unarchive all in {source} failed: not a directory")
+            die(f"Unarchive all in {source} failed: not a directory")
+        for file in source.iterdir():
+            if not file.suffix in ['7z','zip']:
+                continue
+            print(f"Unarchive file: {file}")
+
+###### Archival-related utility functions ################################
+
 def total_source_size(sources:list) -> int:
     """Given a source file list of (Path,int) tuples (path and file size),
     return total file size"""
@@ -69,12 +109,12 @@ def enumerate_source(source:Path) -> list:
 
     Returns a list of (Path,int) tuples with file path and file size.
 
-    Will throw exception if running into a file that is not readable.
+    Will throw exception if running into a file that is not readable."""
 
-    TODO: We should probably do the whole enumeration of sources and what will
-    happen to those files first so we don't need to do that again when we import
-    stuff.
-    """
+    # TODO: We should probably do the whole enumeration of sources and what will
+    # happen to those files first so we don't need to do that again when we import
+    # stuff.
+
     source_files = []
     for root, _, files in os.walk(source):
         for file in files:
@@ -89,10 +129,10 @@ def enumerate_source(source:Path) -> list:
     return source_files
 
 def human_size(size:int) -> str:
-    """Return `size` byte count as a human-friendly value.
+    """Return `size` byte count as a human-friendly value."""
     
-    FIXME: There's python_utils.converters.scale_1024() too? (python_utils is an
-    indirect pypi requirement from progressbar2)"""
+    # TODO: There's python_utils.converters.scale_1024() too? (python_utils is an
+    # indirect pypi requirement from progressbar2)
     if size > 1024*1024*1024:
         c = size / (1024*1024*1024)
         return f"{c:.1f} GiB"
