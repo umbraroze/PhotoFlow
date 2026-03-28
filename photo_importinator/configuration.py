@@ -16,8 +16,6 @@ from pathlib import Path
 from dataclasses import dataclass
 import logging
 from colorama import Fore, Back, Style
-from py7zr.archiveinfo import Folder
-
 from dazzle import *
 
 logger = logging.getLogger(__name__)

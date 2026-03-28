@@ -83,7 +83,7 @@ def photo_scan(config:Configuration):
 ###### Main program ######################################################
 
 # Useful values: logging.INFO or logging.DEBUG
-log_level = logging.DEBUG
+log_level = logging.INFO
 delete_old_log = True
 
 def main() -> int:

@@ -6,15 +6,13 @@
 # Distributed under the MIT license. See the LICENSE file in parent folder
 # for the full license terms.
 
-# standard library
 import os
 from pathlib import Path
 import logging
-# PyPI
-import py7zr
-from numpy.f2py.crackfortran import sourcecodeform
+from zipfile import ZipFile
 
-# Local
+import py7zr
+import zipfile
 from dazzle import *
 from configuration import Configuration
 
@@ -74,7 +72,7 @@ def unpack_all(configuration:Configuration):
     # Print the configuration
     print_boxed_text("UNPACK")
     print(f" - Camera: {configuration.camera}")
-    print(f" - Cloud drive: {ICON_CLOUD} {configuration.card}")
+    print(f" - Cloud drive: {ICON_CLOUD}  {configuration.card}")
     if configuration.dry_run:
         print(" - Dry run")
     if configuration.leave_originals:
@@ -90,9 +88,26 @@ def unpack_all(configuration:Configuration):
             logger.error(f"Unarchive all in {source} failed: not a directory")
             die(f"Unarchive all in {source} failed: not a directory")
         for file in source.iterdir():
-            if not file.suffix in ['7z','zip']:
+            if not file.suffix in ['.7z','.zip']:
                 continue
+            if file.suffix == '.7z':
+                die("Unimplemented")
             print(f"Unarchive file: {file}")
+            with ZipFile(file,'r') as archive_file:
+                for entry in archive_file.filelist:
+                    out_path = source / Path(entry.filename)
+                    if not configuration.dry_run:
+                        archive_file.extract(entry, source)
+                        print(f"{ICON_DONE}  {out_path}")
+                        logger.debug(f"Unpacked {out_path}")
+                    else:
+                        print(f"{ICON_SKIP}  Skipped: {out_path} (Dry run)")
+                        logger.debug(f"Dry run: would have unpacked {out_path}")
+            if not (configuration.leave_originals or configuration.dry_run):
+                os.unlink(file)
+                logger.info(f"Deleted successfully unpacked file {file}")
+            else:
+                logger.debug(f"Didn't delete the original")
 
 ###### Archival-related utility functions ################################
 
