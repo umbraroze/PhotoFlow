@@ -57,13 +57,24 @@ visualising in GIS software of your choice.
 
 # Further development directions and contributing
 
-If you somehow get really bright ideas on how to expand these,
-or have found a terrifying bug, please file an Issue!
+I have started to use the
+[Issue tracker](https://github.com/umbraroze/PhotoFlow/issues)
+to keep track of improvements I'm going to add to the scripts
+here. There's also a list of random improvement ideas
+from the previous bug tracker that can be found in the Wiki page
+[Tasks](https://github.com/umbraroze/PhotoFlow/wiki/Tasks); these
+were either done already, or should probably be converted into
+Issues whenever I finally get around to do that. 
+
+If you somehow get really bright ideas on how to expand these
+humble scripts, or have found a terrifying bug, please feel free
+to file an Issue!
+
+If you actually use these scripts for anything worthwhile and
+manage to get them running on your own, I first want to thank
+you. Secondly, please tell everybody how you use these as part
+of your workflow in a blog or like.
 
 I *might* merge in well crafted Pull Requests, but expect me to
 *scrutinise* them. ...Nothing malicious, just saying it's probably
 going to take a long time.
-
-I currently don't use the Issue tracker to document whatever new
-expansion ideas I personally have; these are currently found in the
-Wiki page [Tasks](https://github.com/umbraroze/PhotoFlow/wiki/Tasks).
