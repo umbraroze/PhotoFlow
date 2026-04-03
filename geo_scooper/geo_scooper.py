@@ -25,6 +25,7 @@ from diskcache import Cache
 
 def make_extended_data(values: dict):
     """Creates a KML ExtendedData tag structure from the dict of given values."""
+    # FIXME: Return type???
     ed = KML.ExtendedData()
     for k in values.keys():
         d = KML.Data(name=k)
@@ -35,6 +36,7 @@ def make_extended_data(values: dict):
 
 def make_geo_timestamp(time,lat,lon):
     """Creates a KML camera data time stamp with latitude and longitude."""
+    # FIXME: Return type???
     return KML.Camera(
         GX.TimeStamp(KML.when(time)),
         KML.latitude(lat),
@@ -159,133 +161,149 @@ def read_exif(file):
 # Command line parameters parsing
 # TODO: Convert this to use argparse instead of getopt
 
-try:
-    opts, args = getopt.getopt(sys.argv[1:], "i:o:c:v", ["input=", "output=","cache=","verbose"])
-except getopt.GetoptError as err:
-    print(err)
-    print("Usage: photo_geo_scooper [-i inputdir] [-o output.kml] [-v]")
-    sys.exit(2)
+# Globals.
 verbose_mode = False
 input_dir = "."
 output_file = "output.kml"
 cache_file = None
 caching = False
-for o, a in opts:
-    if o in ("-i", "--input"):
-        input_dir = a
-    elif o in ("-o", "--output"):
-        output_file = a
-    elif o in ("-c", "--cache"):
-        cache_file = a
-        caching = True
-    elif o == "-v":
-        verbose_mode = True
-if verbose_mode:
-    print(f"Input dir: {input_dir}")
-    print(f"Output file: {output_file}")
-    if cache_file is not None:
-        print(f"Cache file: {cache_file}")
-    else:
-        print("Caching disabled")
-
-# Set up cache
 cache = None
-if caching:
-    cache = Cache(cache_file)
 
-# New KML document
-kml = KML.kml(KML.Document())
+def parse_command_line():
+    global input_dir, output_file, cache_file, caching, verbose_mode
+    try:
+        opts, _ = getopt.getopt(sys.argv[1:], "i:o:c:v", ["input=", "output=","cache=","verbose"])
+    except getopt.GetoptError as err:
+        print(err)
+        print("Usage: photo_geo_scooper [-i inputdir] [-o output.kml] [-v]")
+        sys.exit(2)
+    for o, a in opts:
+        if o in ("-i", "--input"):
+            input_dir = a
+        elif o in ("-o", "--output"):
+            output_file = a
+        elif o in ("-c", "--cache"):
+            cache_file = a
+            caching = True
+        elif o == "-v":
+            verbose_mode = True
 
-# Walk the input directory
-for root, dirs, files in os.walk(input_dir):
-    path = root.split(os.sep)
-    for file in files:
-        # Get the file's full name
-        fqfile = os.sep.join(path)+os.sep+file
-        # Skip non-files
-        if not os.path.isfile(fqfile):
-            continue
-        # OK, we're cool, continuing
-        if verbose_mode:
-            print(f"Processing {fqfile}")
-        
-        # Get the file's last modified time
-        mtime = os.path.getmtime(fqfile)
 
-        # Read the exif data (via cache possibly)
-        if caching:
-            # Yes we do caching and yes this gets complicated
-            try:
-                cdata = pickle.loads(cache[fqfile])
-            except KeyError:
-                cdata = None
-            if cdata is None or mtime > cdata['mtime']:
-                # Cache doesn't exist or is too old.
-                # Come up with brand new data and cache it.
+def main():
+    global input_dir, output_file, cache_file, caching, cache, verbose_mode
+
+    # Parse command line
+    parse_command_line()
+
+    # Print out our settings.
+    if verbose_mode:
+        print(f"Input dir: {input_dir}")
+        print(f"Output file: {output_file}")
+        if cache_file is not None:
+            print(f"Cache location: {cache_file}")
+        else:
+            print("Caching disabled")
+
+    # Set up cache
+    if caching:
+        cache = Cache(cache_file)
+
+    # New KML document
+    kml = KML.kml(KML.Document())
+
+    # Walk the input directory
+    for root, dirs, files in os.walk(input_dir):
+        path = root.split(os.sep)
+        for file in files:
+            # Get the file's full name
+            fqfile = os.sep.join(path)+os.sep+file
+            # Skip non-files
+            if not os.path.isfile(fqfile):
+                continue
+            # OK, we're cool, continuing
+            if verbose_mode:
+                print(f"Processing {fqfile}")
+            
+            # Get the file's last modified time
+            mtime = os.path.getmtime(fqfile)
+
+            # Read the exif data (via cache possibly)
+            if caching:
+                # Yes we do caching and yes this gets complicated
+                try:
+                    cdata = pickle.loads(cache[fqfile])
+                except KeyError:
+                    cdata = None
+                if cdata is None or mtime > cdata['mtime']:
+                    # Cache doesn't exist or is too old.
+                    # Come up with brand new data and cache it.
+                    try:
+                        date, kml_lat, kml_lon = read_exif(fqfile)
+                    except SkippedFileException:
+                        # If no sufficient data, save anyway
+                        cdata = dict()
+                        cdata['mtime'] = mtime
+                        cdata['date'] = None
+                        cdata['kml_lat'] = None
+                        cdata['kml_lon'] = None
+                        cache[fqfile] = pickle.dumps(cdata)
+                        # And off we go to the next file then
+                        continue
+                    # OK, here's the regular data
+                    cdata = dict()
+                    cdata['mtime'] = mtime
+                    cdata['date'] = date
+                    cdata['kml_lat'] = kml_lat
+                    cdata['kml_lon'] = kml_lon
+                    cache[fqfile] = pickle.dumps(cdata)
+                else:
+                    # Cache is valid
+                    # Retrieve cached values
+                    if verbose_mode:
+                        print(" - File unmodified, cached values used")
+                    date = cdata['date']
+                    kml_lat = cdata['kml_lat']
+                    kml_lon = cdata['kml_lon']
+                    if date is None:
+                        # Well there's no data for this then
+                        if verbose_mode:
+                            print(" - No coordinates found, skipping")
+                        continue
+
+            else:
+                # No caching magic, just read the damn thing
                 try:
                     date, kml_lat, kml_lon = read_exif(fqfile)
                 except SkippedFileException:
-                    # If no sufficient data, save anyway
-                    cdata = dict()
-                    cdata['mtime'] = mtime
-                    cdata['date'] = None
-                    cdata['kml_lat'] = None
-                    cdata['kml_lon'] = None
-                    cache[fqfile] = pickle.dumps(cdata)
-                    # And off we go to the next file then
-                    continue
-                # OK, here's the regular data
-                cdata = dict()
-                cdata['mtime'] = mtime
-                cdata['date'] = date
-                cdata['kml_lat'] = kml_lat
-                cdata['kml_lon'] = kml_lon
-                cache[fqfile] = pickle.dumps(cdata)
-            else:
-                # Cache is valid
-                # Retrieve cached values
-                if verbose_mode:
-                    print(" - File unmodified, cached values used")
-                date = cdata['date']
-                kml_lat = cdata['kml_lat']
-                kml_lon = cdata['kml_lon']
-                if date is None:
-                    # Well there's no data for this then
-                    if verbose_mode:
-                        print(" - No coordinates found, skipping")
                     continue
 
-        else:
-            # No caching magic, just read the damn thing
-            try:
-                date, kml_lat, kml_lon = read_exif(fqfile)
-            except SkippedFileException:
-                continue
-
-        if verbose_mode:
-            print(f" - Coordinates: {kml_lat},{kml_lon}")
-        # ...but wait! Did we somehow get pointed to the Null Island?
-        if kml_lat == 0.0 and kml_lon == 0.0:
             if verbose_mode:
-                print(" - Coordinates are probably bogus, skipping this one")
-            continue
-        # Right! With that out of the way, we can be reasonably sure we indeed have
-        # what we need: File name, date stamp, and coordinates.
+                print(f" - Coordinates: {kml_lat},{kml_lon}")
+            # ...but wait! Did we somehow get pointed to the Null Island?
+            if kml_lat == 0.0 and kml_lon == 0.0:
+                if verbose_mode:
+                    print(" - Coordinates are probably bogus, skipping this one")
+                continue
+            # Right! With that out of the way, we can be reasonably sure we indeed have
+            # what we need: File name, date stamp, and coordinates.
 
-        # Construct the KML data
-        ed = {
-            "Path": fqfile,
-            "Date": date.strftime("%Y-%m-%dT%H:%M:%S"),
-        }
-        place_mark = KML.Placemark( 
-            KML.name(file),
-            make_geo_timestamp(date.strftime("%Y-%m-%dT%H:%M:%S"),kml_lat,kml_lon),
-            make_extended_data(ed)
-        )
-        # ...and put it on the file!
-        kml.Document.append(place_mark)
+            # Construct the KML data
+            ed = {
+                "Path": fqfile,
+                "Date": date.strftime("%Y-%m-%dT%H:%M:%S"),
+            }
+            place_mark = KML.Placemark( 
+                KML.name(file),
+                make_geo_timestamp(date.strftime("%Y-%m-%dT%H:%M:%S"),kml_lat,kml_lon),
+                make_extended_data(ed)
+            )
+            # ...and put it on the file!
+            kml.Document.append(place_mark)
 
-# Write the KML document to file.
-f = open(output_file,"wb")
-f.write(etree.tostring(kml,pretty_print=True))
-f.close()
+    # Write the KML document to file.
+    f = open(output_file,"wb")
+    f.write(etree.tostring(kml,pretty_print=True))
+    f.close()
+
+if __name__ == '__main__':
+    main()
