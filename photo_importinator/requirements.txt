@@ -1,6 +1,9 @@
 # PyPi requirements.
 # To install: pip install -r requirements.txt
 
+# CLI parsing
+typer
+
 # Good ol' ANSI.SYS action, some emoji and fancy progress bars
 # are needed to spice up the output. The old meets the new.
 # How are you fellow kids. Am I doing this right.

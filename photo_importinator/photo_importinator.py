@@ -8,8 +8,10 @@
 
 import os, sys, time, datetime
 import colorama
+from typing import Annotated
+from typer import FileBinaryRead, FileBinaryWrite, FileText, FileTextWrite
+import typer
 from pathlib import Path
-
 from configuration import Configuration, logfile_path
 from running_stats import RunningStats
 from dazzle import *
@@ -17,6 +19,46 @@ from photo_processing import *
 
 import logging
 logger = logging.getLogger(__name__)
+
+###### APPLICATION ######################################################
+
+# TODO: Stuff from configuration.parse_command_line() should go here.
+
+app = typer.Typer(name="photo_importinator",
+                  help="Move or convert photos from SD card or cloud to your photo server.",
+                  no_args_is_help=True)
+
+@app.command(name="import",
+             help="Import from the specified camera.")
+def command_import(camera: Annotated[str,typer.Argument()],
+                   configuration_file: Annotated[FileText,typer.Option()] = Configuration.default_configuration_path()):
+    print(f"Camera: {camera}")
+    print(f"Configuration file: {configuration_file}")
+
+@app.command(name="list",
+             help="List cameras and targets.")
+def command_list_cameras_and_targets():
+    pass
+
+@app.command(name="stats",
+             help="List running statistics of previous imports.")
+def command_running_stats():
+    pass
+
+@app.command(name="purge",
+             help="Delete log file or running stats.")
+def command_purge():
+    pass
+
+@app.command(name="scan",
+             help="Examine source photos and produce a CSV-formatted import preview.")
+def command_scan():
+    pass
+
+@app.command(name="unpack",
+             help="Unpack all archive files on specified cloud drive.")
+def command_unpack():
+    pass
 
 ###### The import job ###################################################
 
@@ -148,4 +190,5 @@ def main() -> int:
     return 0
 
 if __name__ == '__main__':
-    main()
+    app()
+    #main()
