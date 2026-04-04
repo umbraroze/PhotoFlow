@@ -9,7 +9,6 @@
 import os, sys, time, datetime
 import colorama
 from typing import Annotated
-from typer import FileBinaryRead, FileBinaryWrite, FileText, FileTextWrite
 import typer
 from pathlib import Path
 from configuration import Configuration, logfile_path
@@ -20,6 +19,12 @@ from photo_processing import *
 import logging
 logger = logging.getLogger(__name__)
 
+###### LOG SETTINGS #####################################################
+
+# Useful values: logging.INFO or logging.DEBUG
+log_level = logging.INFO
+delete_old_log = True
+
 ###### APPLICATION ######################################################
 
 # TODO: Stuff from configuration.parse_command_line() should go here.
@@ -27,38 +32,147 @@ logger = logging.getLogger(__name__)
 app = typer.Typer(name="photo_importinator",
                   help="Move or convert photos from SD card or cloud to your photo server.",
                   no_args_is_help=True)
+config = Configuration()
 
 @app.command(name="import",
              help="Import from the specified camera.")
-def command_import(camera: Annotated[str,typer.Argument()],
-                   configuration_file: Annotated[FileText,typer.Option()] = Configuration.default_configuration_path()):
-    print(f"Camera: {camera}")
-    print(f"Configuration file: {configuration_file}")
+def command_import(
+    camera:
+        Annotated[str,
+            typer.Argument(help="Camera name.")],
+    configuration_file:
+        Annotated[Path,
+            typer.Option("--configuration-file","-C",
+                help="Configuration file.")] =
+            Configuration.default_configuration_path(),
+    target:
+        Annotated[str,
+            typer.Option("--target","-T",
+                help="Target to import to. Default specified in configuration file.")]
+            = None,
+    card:
+        Annotated[str,
+            typer.Option("--card","-c",
+                help="Card to import from. Default specified in configuration file.")]
+            = None,
+    date:
+        Annotated[datetime.datetime,
+            typer.Option(formats=['%Y-%m-%d'],
+                help="Date for the backup file name. (Time portion is ignored.)")]
+            = datetime.date.today(),
+    skip_backup:
+        Annotated[bool,
+            typer.Option(help="Skip the backup phase.")]
+            = False,
+    skip_import:
+        Annotated[bool,
+            typer.Option(help="Skip the import phase.")]
+            = False,
+    dry_run: Annotated[bool,
+            typer.Option(help="Explain what would be done, but do nothing.")]
+            = False,
+    leave_originals:
+        Annotated[bool,
+            typer.Option(help="Leave original files on the card.")]
+            = False,
+    overwrite_target:
+        Annotated[bool,
+            typer.Option(help="If target files exist, overwrite them instead of skipping.")]
+            = False):
+    config.action = Configuration.Action.IMPORT
+    config.configuration_file = configuration_file
+    config.target = target
+    config.card = card
+    config.date = date
+    config.skip_backup = skip_backup
+    config.skip_import = skip_import
+    config.dry_run = dry_run
+    config.leave_originals = leave_originals
+    config.overwrite_target = overwrite_target
+    config.camera = camera
+    logger.info('ACTION: Import')
+    config.read_configuration()
+    config.parse_configuration()
+    config.find_source_path()
+    config.validate()
+    #photo_import(config)
+    sys.exit(0)
 
 @app.command(name="list",
              help="List cameras and targets.")
-def command_list_cameras_and_targets():
-    pass
+def command_list_cameras_and_targets(
+    configuration_file:
+        Annotated[Path,
+        typer.Option("--configuration-file", "-C",
+                     help="Configuration file.")] =
+        Configuration.default_configuration_path()):
+    config.action = Configuration.Action.LIST_CAMERAS_AND_TARGETS
+    config.configuration_file = configuration_file
+    logger.info('ACTION: List Cameras and Targets')
+    config.read_configuration()
+    # NOTE: MUST NOT validate config. We rely entirely on config file, not CLI.
+    config.list_cameras_and_targets()
+    sys.exit(0)
 
 @app.command(name="stats",
              help="List running statistics of previous imports.")
-def command_running_stats():
-    pass
+def command_running_stats(
+    configuration_file:
+        Annotated[Path,
+            typer.Option("--configuration-file", "-C",
+                         help="Configuration file.")] =
+            Configuration.default_configuration_path()):
+    config.action = Configuration.Action.LIST_RUNNING_STATS
+    config.configuration_file = configuration_file
+    logger.info('ACTION: List running stats')
+    config.read_configuration()
+    # NOTE: MUST NOT validate config. We rely entirely on config file, not CLI.
+    running_stats = RunningStats(config)
+    running_stats.list_all()
+    sys.exit(0)
 
 @app.command(name="purge",
              help="Delete log file or running stats.")
-def command_purge():
-    pass
+def command_purge(
+    to_be_purged: # TODO: Should validate if this is 'log' or 'stats'.
+        Annotated[str,
+            typer.Argument(help="'log' or 'stats'.")]):
+    # TODO: if running stats/log file custom paths are ever implemented, this should parse config, I guess.
+    if to_be_purged == 'log':
+        config.action = Configuration.Action.PURGE_LOG_FILE
+        logger.info('ACTION: Purge log files')  # :-(
+        logging.shutdown()
+        os.unlink(logfile_path())
+        print(f"Purged Photo Importinator log file {logfile_path().absolute()}")
+    elif to_be_purged == 'stats':
+        config.action = Configuration.Action.PURGE_RUNNING_STATS
+        logger.info('ACTION: Purge running stats')
+        os.unlink(config.running_stats_path())
+        print(f"Running stats file {config.running_stats_path()} removed, stats are now reset")
+    else:
+        logger.error(f'ACTION: Invalid purge target {to_be_purged}')
+        print(f"I don't know how to purge {to_be_purged}")
+        sys.exit(1)
+    sys.exit(0)
 
 @app.command(name="scan",
              help="Examine source photos and produce a CSV-formatted import preview.")
 def command_scan():
-    pass
+    logger.info('ACTION: Scan')
+    config.read_configuration()
+    config.parse_configuration()
+    config.find_source_path()
+    config.validate()
+    die("Unimplemented")
+    sys.exit(0)
 
 @app.command(name="unpack",
              help="Unpack all archive files on specified cloud drive.")
 def command_unpack():
-    pass
+    logger.info('ACTION: Unpack')
+    config.validate()
+    archival.unpack_all(config)
+    sys.exit(0)
 
 ###### The import job ###################################################
 
@@ -117,16 +231,7 @@ def photo_import(config:Configuration):
     print(f"\nTotal time: {total_time}")
     logger.info(f'Import finished, total time: {total_time}')
 
-###### The scan job #####################################################
-
-def photo_scan(config:Configuration):
-    print("Unimplemented")
-
 ###### Main program ######################################################
-
-# Useful values: logging.INFO or logging.DEBUG
-log_level = logging.INFO
-delete_old_log = True
 
 def main() -> int:
     """Photo Importinator main program."""
@@ -140,55 +245,11 @@ def main() -> int:
     # Start logging
     logging.basicConfig(level=log_level,filename=logfile_path())
     logger.info('Photo Importinator started.')
-    
-    # Parse command line options and configuration file, do all
-    # necessary sanity checks as you go.
-    config = Configuration()
-    config.parse()
-    # Handle subcommands. Depending on what we do we need to either have
-    # a valid configuration or we must not actually validate the configuration.
-    if config.action == Configuration.Action.IMPORT:
-        logger.info('ACTION: Import')
-        config.validate()
-        photo_import(config)
-        sys.exit(0)
-    elif config.action == Configuration.Action.LIST_CAMERAS_AND_TARGETS:
-        logger.info('ACTION: List Cameras and Targets')
-        # NOTE: MUST NOT validate config, actually.
-        config.list_cameras_and_targets()
-        sys.exit(0)
-    elif config.action == Configuration.Action.LIST_RUNNING_STATS:
-        logger.info('ACTION: List running stats')
-        running_stats = RunningStats(config)
-        running_stats.list_all()
-        sys.exit(0)
-    elif config.action == Configuration.Action.PURGE_LOG_FILE:
-        logger.info('ACTION: Purge log files') # :-(
-        logging.shutdown()
-        os.unlink(logfile_path())
-        print(f"Purged Photo Importinator log file {logfile_path().absolute()}")
-        sys.exit(0)
-    elif config.action == Configuration.Action.PURGE_RUNNING_STATS:
-        logger.info('ACTION: Purge running stats')
-        os.unlink(config.running_stats_path())
-        print(f"Running stats file {config.running_stats_path()} removed, stats are now reset")
-        sys.exit(0)
-    elif config.action == Configuration.Action.SCAN:
-        logger.info('ACTION: Scan')
-        config.validate()
-        photo_scan(config)
-        sys.exit(0)
-    elif config.action == Configuration.Action.UNPACK:
-        logger.info('ACTION: Unpack')
-        config.validate()
-        archival.unpack_all(config)
-        sys.exit(0)
-    else:
-        logger.error(f"ACTION: Unknown action {config.action}!")
-        die(f"Unhandled action {config.action}")
+
+    # Parse command line and branch out to wherever.
+    app()
 
     return 0
 
 if __name__ == '__main__':
-    app()
-    #main()
+    main()

@@ -17,6 +17,7 @@ from dataclasses import dataclass
 import logging
 from colorama import Fore, Back, Style
 from dazzle import *
+from deprecated import deprecated
 
 logger = logging.getLogger(__name__)
 
@@ -134,6 +135,7 @@ class Configuration:
         m = re.sub(pattern=r'\{(.*?):(.*?)\}',repl=r'{\1}', string=self.folder_structure)
         return self.target_path / Path(m.format(year='YYYY',month='MM',day='DD'))
 
+    @deprecated()
     def parse_command_line(self):
         """Parses script command line arguments for Photo Importinator."""
         parser = argparse.ArgumentParser(
@@ -390,6 +392,7 @@ class Configuration:
             # TODO: Does this need more filtering? (Doesn't seem to be picking . and .. etc)
             return list(map(lambda x: self.source_path / x, os.listdir(self.source_path)))
 
+    @deprecated()
     def parse(self):
         """Read configuration. Do all of the relevant steps to ensure
         configuration is set correctly for the actual processing."""
