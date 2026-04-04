@@ -8,7 +8,6 @@
 
 import os, sys, platform
 import re
-import argparse
 import datetime
 import tomllib
 from enum import Enum
@@ -134,124 +133,6 @@ class Configuration:
         # Chop off the f-string formatting directives, just leaving the variable names
         m = re.sub(pattern=r'\{(.*?):(.*?)\}',repl=r'{\1}', string=self.folder_structure)
         return self.target_path / Path(m.format(year='YYYY',month='MM',day='DD'))
-
-    @deprecated()
-    def parse_command_line(self):
-        """Parses script command line arguments for Photo Importinator."""
-        parser = argparse.ArgumentParser(
-            prog='photo_importinator',
-            description='Move or convert photos from SD card or cloud to your photo server.')        
-        subparsers = parser.add_subparsers(dest='command')
-
-        # Global arguments.
-        parser.add_argument('-C','--configuration-file',default=Configuration.default_configuration_path(),
-                            help=f"specify configuration file (default: {Configuration.default_configuration_path()})")
-
-        # Import subcommand and its arguments
-        import_cmd = subparsers.add_parser('import',aliases=['i'],help='import from the specified camera.')
-
-        # Target and destination specifications
-        import_cmd.add_argument('-T','--target',default=None,help="specify target device (default: as set in config)")
-        import_cmd.add_argument('-c','--card',default=None,help='card path/device (default: as per camera settings in config)')
-        import_cmd.add_argument('--date',
-                                type=lambda d: datetime.datetime.strptime(d, '%Y-%m-%d').date(),
-                                default=datetime.date.today(),
-                                help="archive date stamp, YYYY-mm-dd (default: current date)")
-        # Skipping switches
-        import_cmd.add_argument('--skip-backup',action='store_true',help="skip backup phase")
-        import_cmd.add_argument('--skip-import',action='store_true',help="skip the final import phase")
-        import_cmd.add_argument('--dry-run',action='store_true',help="do nothing, except explain what would be done")
-        import_cmd.add_argument('--leave-originals',action='store_true',help="leave original files intact")
-        import_cmd.add_argument('--overwrite-target',action='store_true',help="overwrite target files if found (default: just skip)")
-        
-        # Camera name as the last positional argument for the import command.
-        import_cmd.add_argument('camera',default=None,nargs='?',help="camera name.")
-
-        # Camera/target list subcommand and its arguments
-        list_cmd = subparsers.add_parser('list',help='list cameras and targets.')
-
-        # Running stats subcommand and its arguments
-        runningstats_cmd = subparsers.add_parser('runningstats',help='list running statistics of previous imports.')
-
-        # Purge command
-        purge_cmd = subparsers.add_parser('purge',help='Delete log file or running stats.')
-        purge_cmd.add_argument('to_be_purged',default=None,nargs='?',help="'log' or 'runningstats'")
-
-        # Scan subcommand and its arguments
-        scan_cmd = subparsers.add_parser('scan',help='Examine source photos and produce a CSV-formatted import preview.')
-
-        # Target and destination specifications
-        scan_cmd.add_argument('-T','--target',default=None,help="specify target device (default: as set in config)")
-        scan_cmd.add_argument('-c','--card',default=None,help='card path/device (default: as per camera settings in config)')
-        
-        # Camera name as the last positional argument for the import command.
-        scan_cmd.add_argument('camera',default=None,nargs='?',help="camera name.")
-        scan_cmd.add_argument('report_output_file',default='scan_results.csv',nargs='?',help="output CSV file.")
-
-        # Unpack command
-        unpack_cmd = subparsers.add_parser('unpack', help='unpack all archive files on specified cloud drive.')
-
-        # Target and destination specifications
-        unpack_cmd.add_argument('-c', '--card', default=None,
-                                help='card path/device (default: as per camera settings in config)')
-        # Skipping switches
-        unpack_cmd.add_argument('--dry-run', action='store_true', help="do nothing, except explain what would be done")
-        unpack_cmd.add_argument('--leave-originals', action='store_true', help="leave original files intact")
-        unpack_cmd.add_argument('--overwrite-target', action='store_true',
-                                help="overwrite target files if found (default: just skip)")
-
-        # Camera name as the last positional argument for the import command.
-        unpack_cmd.add_argument('camera', default=None, nargs='?', help="camera name.")
-
-        # Done with the setup! Parse the arguments!
-        args = parser.parse_args()
-
-        # Populate the configuration object with parsed values
-        self.configuration_file=args.configuration_file
-
-        # Find out what our subcommand is, set the relevant arguments.
-        if args.command is None:
-            parser.print_help()
-            sys.exit(0)
-        elif args.command in ['import','i']:
-            self.action = Configuration.Action.IMPORT
-            self.target=args.target
-            self.card=args.card
-            self.date=args.date
-            self.skip_backup=args.skip_backup
-            self.skip_import=args.skip_import
-            self.dry_run=args.dry_run
-            self.leave_originals=args.leave_originals
-            self.overwrite_target=args.overwrite_target
-            self.camera=args.camera
-        elif args.command in ['list']:
-            self.action = Configuration.Action.LIST_CAMERAS_AND_TARGETS
-        elif args.command in ['runningstats']:
-            self.action = Configuration.Action.LIST_RUNNING_STATS
-        elif args.command in ['purge']:
-            if args.to_be_purged is None:
-                die("Unspecified purge target (must be 'log' or 'runningstats')")
-            elif args.to_be_purged == 'log':
-                self.action = Configuration.Action.PURGE_LOG_FILE
-            elif args.to_be_purged == 'runningstats':
-                self.action = Configuration.Action.PURGE_RUNNING_STATS
-            else:
-                die(f"Unknown purge target {args.to_be_purged}")
-        elif args.command in ['scan']:
-            self.action = Configuration.Action.SCAN
-            self.target=args.target
-            self.card=args.card
-            self.camera = args.camera
-            self.report_output_file=Path(args.report_output_file)
-        elif args.command in ['unpack']:
-            self.action = Configuration.Action.UNPACK
-            self.card=args.card
-            self.dry_run=args.dry_run
-            self.leave_originals=args.leave_originals
-            self.overwrite_target=args.overwrite_target
-            self.camera=args.camera
-        else:
-            die(f"Unknown command {args.command}")
 
     def read_configuration(self) -> dict:
         if not os.path.exists(self.configuration_file):
@@ -391,23 +272,6 @@ class Configuration:
             # Because os.listdir() doesn't return the prefixes.
             # TODO: Does this need more filtering? (Doesn't seem to be picking . and .. etc)
             return list(map(lambda x: self.source_path / x, os.listdir(self.source_path)))
-
-    @deprecated()
-    def parse(self):
-        """Read configuration. Do all of the relevant steps to ensure
-        configuration is set correctly for the actual processing."""
-        self.parse_command_line()
-        self.read_configuration()
-        match self.action:
-            case Configuration.Action.IMPORT:
-                self.parse_configuration()
-                self.find_source_path()
-            case Configuration.Action.SCAN:
-                self.parse_configuration()
-                self.find_source_path()
-            case Configuration.Action.UNPACK:
-                self.parse_configuration()
-                self.find_source_path()
 
     def validate(self):
         if not self.is_valid_config():
