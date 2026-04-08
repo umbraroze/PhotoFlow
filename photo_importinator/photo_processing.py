@@ -6,7 +6,6 @@
 # Distributed under the MIT license. See the LICENSE file in parent folder
 # for the full license terms.
 
-# Standard library
 import os, sys
 import datetime
 from pathlib import Path
@@ -17,10 +16,8 @@ from enum import Enum
 import logging
 import subprocess
 import shutil
-# PyPI
 import exiv2
-from colorama import Fore, Back, Style
-# Local
+from rich import print
 from dazzle import *
 import archival
 from configuration import Configuration
@@ -289,7 +286,7 @@ class MoveTask(Task):
             self._convert()
         # TODO: Further error checking/reporting here?
     def print_status(self):
-        print(f"{self.source_file}\n  Format: {self.file_type} * Convert: {self.convert} * Dry run: {self.dry_run}\n  {ICON_TO}  {self.target_file}")
+        print(f"{self.source_file}\n  Format: {self.file_type} * Convert: {self.convert} * Dry run: {self.dry_run}\n :right_arrow: {self.target_file}")
 
 ###### Import queue ######################################################
 
@@ -363,12 +360,12 @@ class ImportQueue:
         self.running_stats.save()
     def print_status_counts(self):
         """Prints out queue status statistics."""
-        print(f"\n{Style.BRIGHT}Statuses:{Style.RESET_ALL}")
+        print("\n[bright_white]Statuses:[/bright_white]")
         for s in self.status_counts.keys():
             print(f" - {s}: {self.status_counts[s]}")
     def print_day_counts(self):
         """Prints out daily counts of jobs per the pertinent date."""
-        print(f"\n{Style.BRIGHT}Day summary:{Style.RESET_ALL}")
+        print("\n[bright_white]Day summary:[/bright_white]")
         self.running_stats.print_session_stats()
 
     def print_status(self):

@@ -14,6 +14,7 @@ from zipfile import ZipFile
 import py7zr
 import zipfile
 from dazzle import *
+from rich import print
 from configuration import Configuration
 
 logger = logging.getLogger(__name__)
@@ -54,7 +55,7 @@ def archive(source:Path, target:Path):
           f"{len(backup_source_files)} files, " + \
           f"{human_size(total_size)} bytes, " + \
           f"{human_size(arc_size)} compressed ({ratio:.2f}% of original))")
-    print(f"{ICON_DONE} Archival complete. " + \
+    print(f":check_mark_button: Archival complete. " + \
           f"{len(backup_source_files)} files, " + \
           f"{human_size(total_size)} bytes, " + \
           f"{human_size(arc_size)} compressed ({ratio:.2f}% of original)")
@@ -72,7 +73,7 @@ def unpack_all(configuration:Configuration):
     # Print the configuration
     print_boxed_text("UNPACK")
     print(f" - Camera: {configuration.camera}")
-    print(f" - Cloud drive: {ICON_CLOUD}  {configuration.card}")
+    print(f" - Cloud drive: :cloud: {configuration.card}")
     if configuration.dry_run:
         print(" - Dry run")
     if configuration.leave_originals:
@@ -98,10 +99,10 @@ def unpack_all(configuration:Configuration):
                     out_path = source / Path(entry.filename)
                     if not configuration.dry_run:
                         archive_file.extract(entry, source)
-                        print(f"{ICON_DONE}  {out_path}")
+                        print(f":check_mark_button: {out_path}")
                         logger.debug(f"Unpacked {out_path}")
                     else:
-                        print(f"{ICON_SKIP}  Skipped: {out_path} (Dry run)")
+                        print(f":cross_mark_button: Skipped: {out_path} (Dry run)")
                         logger.debug(f"Dry run: would have unpacked {out_path}")
             if not (configuration.leave_originals or configuration.dry_run):
                 os.unlink(file)

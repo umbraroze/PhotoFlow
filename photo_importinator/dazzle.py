@@ -2,25 +2,21 @@
 ##########################################################################
 # Photo Importinator III: This Time It's Python For Some Reason
 ##########################################################################
-# (c) 2024,2025 Rose Midford.
+# (c) 2024,2025,2026 Rose Midford.
 # Distributed under the MIT license. See the LICENSE file in parent folder
 # for the full license terms.
 
 import sys
-from colorama import just_fix_windows_console
-import emoji
-import progressbar
 from rich import print
 from rich.console import Console
 from rich.panel import Panel
 from rich.text import Text
+import progressbar
 
 console = Console()
 
 def endazzle_terminal():
     """Initialise terminal window so that it can accept "fancy" output."""
-    # Initialise Colorama
-    just_fix_windows_console()
     # Make sure progressbar magic can happen
     progressbar.streams.wrap_stderr()
 
@@ -50,9 +46,3 @@ def move_msg(source:str,destination:str):
     print(f"{source} :right_arrow: {destination}")
 def convert_msg(source:str,destination:str):
     print(f"[Convert] {source} :right_arrow: {destination}")
-
-ICON_DONE = emoji.emojize(':check_mark_button:',variant='emoji_type')
-ICON_TO = emoji.emojize(':right_arrow:',variant='emoji_type')
-ICON_WARN = emoji.emojize(':warning:',variant='emoji_type')
-ICON_SKIP = emoji.emojize(':cross_mark_button:',variant='emoji_type') 
-ICON_CLOUD = emoji.emojize(':cloud:',variant='emoji_type')

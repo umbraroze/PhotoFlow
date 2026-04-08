@@ -14,6 +14,7 @@ from pathlib import Path
 from configuration import Configuration, logfile_path
 from running_stats import RunningStats
 from dazzle import *
+from rich import print
 from photo_processing import *
 
 import logging
@@ -109,7 +110,7 @@ def command_import(
     print(colorama.Style.BRIGHT + "Settings:" + colorama.Style.RESET_ALL)
     print(f"Camera:        {config.camera}")
     if config.is_cloud_source():
-        print(f"Cloud drive:   {ICON_CLOUD} {config.card}")
+        print(f"Cloud drive:   :cloud: {config.card}")
     else:
         print(f"Card:          {config.card}")
     print(f"Backup folder: {config.backup_path}")

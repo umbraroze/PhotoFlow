@@ -14,7 +14,7 @@ from enum import Enum
 from pathlib import Path
 from dataclasses import dataclass
 import logging
-from colorama import Fore, Back, Style
+from rich import print
 from dazzle import *
 from deprecated import deprecated
 
@@ -306,19 +306,19 @@ class Configuration:
         for c in self.__config['Cameras']:
             if c != 'default':
                 if c == default_camera:
-                    print(f" - {Fore.GREEN}{Style.BRIGHT}{c}{Style.RESET_ALL} (default)")
+                    print(f" - [bright_green]{c}[/bright_green] (default)")
                 else:
                     print(f" - {c}")
         if default_camera == 'None':
-            print(f"   {Fore.YELLOW}{Style.BRIGHT}No default camera specified.{Style.RESET_ALL}")
+            print("   [bright_yellow]No default camera specified.[/bright_yellow]")
         print()
         print_boxed_text("TARGETS")
         for t in self.__config['Target']:
             if t != 'default':
                 if t == default_target:
-                    print(f" - {Fore.GREEN}{Style.BRIGHT}{t}{Style.RESET_ALL} (default)")
+                    print(f" - [bright_green]{t}[/bright_green] (default)")
                 else:
                     print(f" - {t}")
         if default_target == 'None':
-            print(f"   {Fore.YELLOW}{Style.BRIGHT}No default target specified.{Style.RESET_ALL}")
+            print("   [bright_yellow]No default target specified.[/bright_yellow]")
         logger.info("List of cameras and targets requested. Exiting.")

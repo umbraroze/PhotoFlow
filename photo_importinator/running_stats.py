@@ -2,7 +2,7 @@
 ##########################################################################
 # Photo Importinator III: This Time It's Python For Some Reason
 ##########################################################################
-# (c) 2025 Rose Midford.
+# (c) 2025,2026 Rose Midford.
 # Distributed under the MIT license. See the LICENSE file in parent folder
 # for the full license terms.
 
@@ -10,6 +10,7 @@ import pickle
 import logging
 from pathlib import Path
 from datetime import date
+from rich import print
 
 from configuration import Configuration
 
@@ -62,7 +63,7 @@ class RunningStats:
             self.session_stats[day] = 1
 
     def print_session_stats(self):
-        # TODO: Make it Dazzle
+        # TODO: Use table system in Rich for formatting
         for d in sorted(self.session_stats.keys()):
             day = d.strftime("%Y-%m-%d")
             print(f" - {day}, {self.session_stats[d]} images")
@@ -74,7 +75,7 @@ class RunningStats:
         logger.debug(f"Running counts saved to {self.db_file}")
 
     def list_all(self):
-        # TODO: Make it Dazzle
+        # TODO: Use table system in Rich for formatting
         for d in sorted(self.stats.keys()):
             day = d.strftime("%Y-%m-%d")
             print(f" - {day}, {self.stats[d]} images")
