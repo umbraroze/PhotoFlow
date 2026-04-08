@@ -6,12 +6,16 @@
 # Distributed under the MIT license. See the LICENSE file in parent folder
 # for the full license terms.
 
-# Standard library
 import sys
-# PyPI
-from colorama import Fore, Back, Style, just_fix_windows_console
+from colorama import just_fix_windows_console
 import emoji
 import progressbar
+from rich import print
+from rich.console import Console
+from rich.panel import Panel
+from rich.text import Text
+
+console = Console()
 
 def endazzle_terminal():
     """Initialise terminal window so that it can accept "fancy" output."""
@@ -21,40 +25,32 @@ def endazzle_terminal():
     progressbar.streams.wrap_stderr()
 
 def print_separator_line():
-    print(Fore.CYAN + "\u2500"*70 + Style.RESET_ALL)
+    console.rule('',style='cyan')
 
-def print_boxed_text(str:str):
+def print_boxed_text(message:str):
     """Prints text inside a box."""
-    if len(str) > 68:
-        raise RuntimeError
-    if len(str) % 2 != 0:
-        str = str + " "
-    spaces = int((68.0/2.0) - (float(len(str))/2.0))
-    print(Fore.CYAN+"\u250c"+("\u2500"*68)+"\u2510")
-    print(Fore.CYAN+"\u2502"+Fore.RED+Style.BRIGHT+(" "*spaces)+str+(" "*spaces)+Style.RESET_ALL+Fore.CYAN+"\u2502")
-    print(Fore.CYAN+"\u2515"+("\u2500"*68)+"\u2518"+Style.RESET_ALL)
+    print(Panel(Text.styled(message,style='bright_red',justify='center'),border_style='cyan'))
 
-def skip_warn(str:str):
+def skip_warn(message:str):
     """Prints a skip warning message.
     It is preceded by a skip icon emoji and displayed in bold."""
-    print(f"{Style.BRIGHT}{ICON_SKIP}  {str}{Style.RESET_ALL}")
-def warn(str:str):
+    print(f":cross_mark_button: [bright_white]{message}[/bright_white]")
+def warn(message:str):
     """Prints a warning message.
     It is preceded by an warning emoji and displayed in yellow."""
-    print(f"{Fore.YELLOW}{ICON_WARN}  {str}{Style.RESET_ALL}")
-def die(str:str,errcode:int=1):
+    print(f":warning: [yellow]{message}[/yellow]")
+def die(message:str,errcode:int=1):
     """Prints an error message and exits with specified error code.
     The message is preceded by an warning emoji and displayed
     in bright red."""
-    print(f"{Fore.RED}{Style.BRIGHT}{ICON_WARN}  {str}{Style.RESET_ALL}")
+    print(f":warning: [bright_red]{message}[/bright_red]")
     sys.exit(errcode)
 
 def move_msg(source:str,destination:str):
-    print(f"{source} {ICON_TO}  {destination}")
+    print(f"{source} :right_arrow: {destination}")
 def convert_msg(source:str,destination:str):
-    print(f"[Convert] {source} {ICON_TO}  {destination}")
+    print(f"[Convert] {source} :right_arrow: {destination}")
 
-# \uFE0F will encourage emoji rendering
 ICON_DONE = emoji.emojize(':check_mark_button:',variant='emoji_type')
 ICON_TO = emoji.emojize(':right_arrow:',variant='emoji_type')
 ICON_WARN = emoji.emojize(':warning:',variant='emoji_type')
