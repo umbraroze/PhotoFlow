@@ -7,7 +7,6 @@
 # for the full license terms.
 
 import os, sys, time, datetime
-import colorama
 from typing import Annotated
 import typer
 from pathlib import Path
@@ -60,7 +59,7 @@ def command_import(
         Annotated[datetime.datetime,
             typer.Option(formats=['%Y-%m-%d'],
                 help="Date for the backup file name. (Time portion is ignored.)")]
-            = datetime.date.today(),
+            = str(datetime.date.today()),
     skip_backup:
         Annotated[bool,
             typer.Option(help="Skip the backup phase.")]
@@ -107,7 +106,7 @@ def command_import(
     print_separator_line()
     print(f"Settings file: {config.configuration_file}")
     print_separator_line()
-    print(colorama.Style.BRIGHT + "Settings:" + colorama.Style.RESET_ALL)
+    print("[bright_white]Settings:[/bright_white]")
     print(f"Camera:        {config.camera}")
     if config.is_cloud_source():
         print(f"Cloud drive:   :cloud: {config.card}")

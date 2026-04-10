@@ -37,12 +37,12 @@ def warn(message:str):
     print(f":warning: [yellow]{message}[/yellow]")
 def die(message:str,errcode:int=1):
     """Prints an error message and exits with specified error code.
-    The message is preceded by an warning emoji and displayed
+    The message is preceded by a warning emoji and displayed
     in bright red."""
     print(f":warning: [bright_red]{message}[/bright_red]")
     sys.exit(errcode)
 
 def move_msg(source:str,destination:str):
-    print(f"{source} :right_arrow: {destination}")
+    print(f"{source} :right_arrow:  {destination}")
 def convert_msg(source:str,destination:str):
-    print(f"[Convert] {source} :right_arrow: {destination}")
+    print(f"[Convert] {source} :right_arrow:  {destination}")
