@@ -14,6 +14,7 @@ from configuration import Configuration, logfile_path
 from running_stats import RunningStats
 from dazzle import *
 from rich import print
+from rich.table import Table
 from photo_processing import *
 
 import logging
@@ -103,28 +104,40 @@ def command_import(
     # Print the banner and relevant settings
     print_boxed_text("PHOTO IMPORTINATOR")
 
-    print_separator_line()
-    print(f"Settings file: {config.configuration_file}")
-    print_separator_line()
-    print("[bright_white]Settings:[/bright_white]")
-    print(f"Camera:        {config.camera}")
+    table = Table(title='Settings',show_header=False,show_edge=False)
+    table.add_column('',style='bright_white',no_wrap=True)
+    table.add_column('', style='white')
+    # Settings file section
+    table.add_section()
+    table.add_row('Settings file',str(config.configuration_file))
+    # Settings section
+    table.add_section()
+    table.add_row('Camera',config.camera)
     if config.is_cloud_source():
-        print(f"Cloud drive:   :cloud: {config.card}")
+        table.add_row('Cloud drive', f":cloud-emoji:  {config.card}")
     else:
-        print(f"Card:          {config.card}")
-    print(f"Backup folder: {config.backup_path}")
-    print(f"Destination:   {config.date_to_path_demo()}")
+        table.add_row('Card',config.card)
+    table.add_row('Backup folder',str(config.backup_path))
+    table.add_row('Destination', str(config.date_to_path_demo()))
+    flags = []
     if config.dry_run:
-        print(" - Dry run.")
+        flags.append("Dry run.")
     if config.skip_backup:
-        print(" - Skipping backup.")
+        flags.append("Skipping backup.")
     if config.skip_import:
-        print(" - Skipping import.")
+        flags.append("Skipping import.")
     if config.leave_originals:
-        print(" - Leaving original files.")
+        flags.append("Leaving original files.")
     if config.overwrite_target:
-        print(" - Overwriting existing target files.")
-    print_separator_line()
+        flags.append("Overwriting existing target files.")
+    if len(flags) > 0:
+        flags_txt = ''
+        for f in flags:
+            flags_txt += f"- {f}\n"
+        flags_txt = flags_txt.rstrip()
+        table.add_section()
+        table.add_row('Flags:',flags_txt)
+    print(table)
 
     # Wait for user confirmation
     try:

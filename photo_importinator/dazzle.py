@@ -30,19 +30,19 @@ def print_boxed_text(message:str):
 def skip_warn(message:str):
     """Prints a skip warning message.
     It is preceded by a skip icon emoji and displayed in bold."""
-    print(f":cross_mark_button: [bright_white]{message}[/bright_white]")
+    print(f":cross_mark_button-emoji:  [bright_white]{message}[/bright_white]")
 def warn(message:str):
     """Prints a warning message.
     It is preceded by an warning emoji and displayed in yellow."""
-    print(f":warning: [yellow]{message}[/yellow]")
+    print(f":warning-emoji:  [yellow]{message}[/yellow]")
 def die(message:str,errcode:int=1):
     """Prints an error message and exits with specified error code.
     The message is preceded by a warning emoji and displayed
     in bright red."""
-    print(f":warning: [bright_red]{message}[/bright_red]")
+    print(f":warning-emoji:  [bright_red]{message}[/bright_red]")
     sys.exit(errcode)
 
 def move_msg(source:str,destination:str):
     print(f"{source} :right_arrow:  {destination}")
 def convert_msg(source:str,destination:str):
-    print(f"[Convert] {source} :right_arrow:  {destination}")
+    print(f"[:gear-emoji:  [bright_green]Convert[/bright_green]] {source} :right_arrow: {destination}")

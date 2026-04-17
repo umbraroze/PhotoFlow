@@ -99,10 +99,10 @@ def unpack_all(configuration:Configuration):
                     out_path = source / Path(entry.filename)
                     if not configuration.dry_run:
                         archive_file.extract(entry, source)
-                        print(f":check_mark_button: {out_path}")
+                        print(f":white_check_mark-emoji: Extracted {out_path}")
                         logger.debug(f"Unpacked {out_path}")
                     else:
-                        print(f":cross_mark_button: Skipped: {out_path} (Dry run)")
+                        print(f":cross_mark_button-emoji: [yellow]Skipped: {out_path}[/yellow] (Dry run)")
                         logger.debug(f"Dry run: would have unpacked {out_path}")
             if not (configuration.leave_originals or configuration.dry_run):
                 os.unlink(file)
