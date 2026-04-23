@@ -1,0 +1,18 @@
+[project]
+name = "photo_importinator"
+version = "0.1.0"
+description = "Imports photos from camera to your photo repository and backs them up."
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    'exiv2',
+    'py7zr',
+    'typer',
+    'rich',
+    'colorama',
+    'progressbar2',
+    'deprecated'
+]
+
+[project.scripts]
+photo_importinator = "photo_importinator:main"

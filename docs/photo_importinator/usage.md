@@ -15,8 +15,23 @@ permalink: /photo_importinator/usage.html
 This is a [Python](https://www.python.org/) script, and it should work
 on a reasonably recent version of Python 3.
 
-Before you run the program, you can install dependencies by running
-`pip install -r requirements.txt`.
+Easiest way to run the program is by using the `uv` project manager
+([`uv` home page][uv]), which makes it easy to get the right version
+of Python and fetch all PyPi dependencies automatically into an
+isolated virtual environment.
+
+Windows users have several options for installing `uv` as listed on the
+home page; I've installed it through [Scoop][scoop], but it should work
+the same no matter where you get it.
+
+You can simply install `uv`, use it to fetch Python (or use the
+version you've installed by hand or from Linux distro).
+When you run the script using `uv run photo_importinator.py`,
+`uv` should find and fetch the required PyPi packages automatically.
+
+See below for how to make `uv` work nicely with PowerShell and
+Windows Terminal. (I haven't used `uv` on Linux yet, unfortunately,
+but I'm sure it'll make things easier over there.)
 
 ### External software needed
 
@@ -26,9 +41,10 @@ In Linux, there's probably a prebuilt package somewhere and you just
 need to know the full path to the software along the lines of
 `/usr/bin/dnglab` or whatever.
 
-In Windows, dnglab, as of writing, has no installer. Stick `dnglab.exe`
-wherever you can find it, but you need to remember the path to the file
-and set it in the configuration file as seen below.
+In Windows, dnglab, as of writing, has no installer and doesn't appear to
+be in package management options (been a while since I checked though).
+Stick `dnglab.exe` wherever you can find it, but you need to remember
+the path to the file and set it in the configuration file as seen below.
 
 ## Terminology and basic premise
 
@@ -212,7 +228,7 @@ card = 'OneDrive'
 As with targets, the default camera can be specified here, or left as `'None'`.
 
 For cameras, the only real required key is `card`. Just specify the drive letter
-in Windows or mount point in POSIXland. Or, if it's a cloud source, just specify
+in Windows, or mount point in POSIX-land. Or, if it's a cloud source, just specify
 which!
 
 The `card_label` feature is not actually used anywhere, but one day I might
@@ -233,11 +249,25 @@ You can add something like this to your PowerShell profile
 
 ```powershell
 function photo_importinator {
-  & python.exe "C:\whatever_folder_you_installed_this_on\photo_importinator\photo_importinator.py" $args
+  $photo_importinator_home="C:\wherever_you_put_these_files\PhotoFlow\photo_importinator"
+  uv run --project ${photo_importinator_home} `
+    "${photo_importinator_home}\photo_importinator.py" $args
 }
 ```
 
+Change the `$photo_importinator_home` location appropriately to point to wherever you
+placed the files.
+
+After this, you can run the program in Windows Terminal with:
+
+```console
+PS C:\wherever> photo_importinator
+```
+
+
 [DCIM]: https://en.wikipedia.org/wiki/Design_rule_for_Camera_File_system
+[uv]:https://docs.astral.sh/uv/
+[scoop]:https://scoop.sh/
 [pyformat]: https://cheatography.com/brianallan/cheat-sheets/python-f-strings-number-formatting/
 [xdg]: https://specifications.freedesktop.org/basedir-spec/latest/
 [dnglab]: https://github.com/dnglab/dnglab

@@ -28,9 +28,10 @@ For a more thorough discussion, please see the
 This is a [Python](https://www.python.org/) script, and it should work
 on a reasonably recent version of Python 3.
 
-For Python modules, see the file
-[`requirements.txt`](requirements.txt) for a list of what's needed.
-You can install them with `pip install -r requirements.txt`.
+Easiest way to run the program is by using the
+[`uv`](https://docs.astral.sh/uv/) project manager
+to handle virtual environment and PyPi dependency
+fetching.
 
 You also need [dnglab](https://github.com/dnglab/dnglab) and usually need to
 specify its location in the configuration file.
