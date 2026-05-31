@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Photo Importinator: Usage &#8212; PhotoFlow  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=27fed22d" />
+    <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="prev" title="Photo Importinator: History" href="history.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="photo-importinator-usage">
+<h1>Photo Importinator: Usage<a class="headerlink" href="#photo-importinator-usage" title="Link to this heading">¶</a></h1>
+<section id="other-software-that-is-needed-to-run-photo-importinator">
+<h2>Other software that is needed to run Photo Importinator<a class="headerlink" href="#other-software-that-is-needed-to-run-photo-importinator" title="Link to this heading">¶</a></h2>
+<section id="python">
+<h3>Python<a class="headerlink" href="#python" title="Link to this heading">¶</a></h3>
+<p>This is a <a class="reference external" href="https://www.python.org/">Python</a> script, and it should work
+on a reasonably recent version of Python 3.</p>
+<p>Easiest way to run the program is by using the <cite>uv</cite> project manager
+(<a class="reference external" href="https://docs.astral.sh/uv/">see the uv home page</a>), which makes it easy
+to get the right version of Python and fetch all PyPi dependencies
+automatically into an isolated virtual environment.</p>
+<p>Windows users have several options for installing <cite>uv</cite> as listed on the
+home page; I’ve installed it through <a class="reference external" href="https://scoop.sh/">Scoop</a>, but it should work
+the same no matter where you get it.</p>
+<p>You can simply install <cite>uv</cite>, use it to fetch Python (or use the
+version you’ve installed by hand or from Linux distro).
+When you run the script using <cite>uv run photo_importinator.py</cite>,
+<cite>uv</cite> should find and fetch the required PyPi packages automatically.</p>
+<p>See below for how to make <cite>uv</cite> work nicely with PowerShell and
+Windows Terminal. (I haven’t used <cite>uv</cite> on Linux yet, unfortunately,
+but I’m sure it’ll make things easier over there.)</p>
+</section>
+<section id="external-software-needed">
+<h3>External software needed<a class="headerlink" href="#external-software-needed" title="Link to this heading">¶</a></h3>
+<p>You need <a class="reference external" href="https://github.com/dnglab/dnglab">dnglab</a> for DNG conversion.</p>
+<p>In Linux, there’s probably a prebuilt package somewhere and you just
+need to know the full path to the software along the lines of
+<cite>/usr/bin/dnglab</cite> or whatever.</p>
+<p>In Windows, dnglab, as of writing, has no installer and doesn’t appear to
+be in package management options (been a while since I checked though).
+Stick <cite>dnglab.exe</cite> wherever you can find it, but you need to remember
+the path to the file and set it in the configuration file as seen below.</p>
+</section>
+</section>
+<section id="terminology-and-basic-premise">
+<h2>Terminology and basic premise<a class="headerlink" href="#terminology-and-basic-premise" title="Link to this heading">¶</a></h2>
+<p>The Photo Importinator moves (or converts) files from a <em>source</em> to a <em>target</em>.</p>
+<p>A <em>source</em> can be either</p>
+<ul class="simple">
+<li><p>an SD card (technically speaking, a local volume with a
+<a class="reference external" href="https://en.wikipedia.org/wiki/Design_rule_for_Camera_File_system">DCIM</a> folder), or</p></li>
+<li><p>a locally synced cloud drive (technically speaking, uh, any local folder
+will do, as you need to provide your own cloud syncing solution anyway).</p></li>
+</ul>
+<p>A <em>target</em> is any folder that your computer/user has access to. Usually,
+this is a NAS folder that is either mounted somewhere (in Windows, appears
+as a drive letter) or is accessible through a locator (in Windows, accessible
+through a server path <em>à la</em> <code class="docutils literal notranslate"><span class="pre">\\NAS-SERVER\photos</span></code>). Each target also has
+a distinct way of organising files (e.g. “files in my NAS server should be
+organised under <code class="docutils literal notranslate"><span class="pre">YEAR\MONTH\DAY</span></code> hierarchy”).</p>
+<section id="what-is-a-camera-anyway-when-you-really-think-about-it">
+<h3>What is a camera, anyway, when you really think about it?<a class="headerlink" href="#what-is-a-camera-anyway-when-you-really-think-about-it" title="Link to this heading">¶</a></h3>
+<p>A <em>camera</em> is, well, a convenient label we give for a particular source of
+photos. It’s an internal label we use for settings for a particular scenario
+when we move images from that particular source.</p>
+<p>For example, I have a Nikon D780, and for the purposes of
+using this program, I have decided to arbitrarily call it <code class="docutils literal notranslate"><span class="pre">Nikon_D780</span></code>.</p>
+<p>The camera uses SD cards, which, when I put them to the SD card reader,
+usually appear as drive <cite>D:</cite> on my computer. Whevever I format the
+card on the camera (as I do after every import), the gamera gives the card
+the volume label <code class="docutils literal notranslate"><span class="pre">NIKON</span> <span class="pre">D780</span></code>. The camera puts one file in the DCIM
+folder, called <cite>NC_FLLST.DAT</cite>, which shouldn’t be touched because none of
+the software I have at hand knows a darn about it. Also, being a Nikon camera,
+it uses <cite>.NEF</cite> raw files, which I prefer to be converted to the DNG format
+automatically. Also, backups will be stored in vein of
+<cite>Nikon_D780_20241122.7z</cite>, with the camera name and date stamp.</p>
+<p>We can now express all of this information like this:</p>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[Cameras.Nikon_D780]</span>
+<span class="n">card</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;D:&#39;</span>
+<span class="n">card_label</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;NIKON D780&#39;</span>
+<span class="n">ignore</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="s1">&#39;NC_FLLST.DAT&#39;</span><span class="w"> </span><span class="p">]</span>
+<span class="n">convert_raw</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="s1">&#39;.NEF&#39;</span><span class="w"> </span><span class="p">]</span>
+</pre></div>
+</div>
+<p>And now whever I refer to my Nikon D780, I can just tell Photo Importinator
+“I want photos from <code class="docutils literal notranslate"><span class="pre">Nikon_D780</span></code>, please”. Or:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">&gt; photo_importinator import Nikon_D780</span>
+</pre></div>
+</div>
+<p>Or:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">&gt; photo_importinator i Nikon_D780</span>
+</pre></div>
+</div>
+<p>No need to tell where the files come from (usually - Windows may sometimes use
+different drive letter, which can be overridden), no need to tell which files to
+ignore, no need to tell which files to convert. Nice! And since I have a default
+target set up, the one and only NAS I have, the importinator also knows where
+the files and backups go.</p>
+<p>So how do we configure the rest?</p>
+</section>
+</section>
+<section id="configuration-file">
+<h2>Configuration file<a class="headerlink" href="#configuration-file" title="Link to this heading">¶</a></h2>
+<p>The configuration file template is provides as <code class="docutils literal notranslate"><span class="pre">photo_importinator_config.example.toml</span></code>.
+Copy the file to <code class="docutils literal notranslate"><span class="pre">photo_importinator_config.toml</span></code> in the appropriate configuration
+directory, edit it appropriately as needed, and you’re good to go.</p>
+<p>The configuration directory is located in Local AppData in Windows
+(<code class="docutils literal notranslate"><span class="pre">C:\Users\[you]\AppData\Local\photo_importinator\</span></code>). In
+Windows Explorer, you can find it by entering <code class="docutils literal notranslate"><span class="pre">%AppData%</span></code>
+in Explorer bar or <cite>Win+R</cite> dialog
+(you end up in your Roaming AppData), navigating up,
+and going to <code class="docutils literal notranslate"><span class="pre">Local</span></code> subfolder.</p>
+<p>In Linux and other POSIXy systems, it is located in your
+<a class="reference external" href="https://specifications.freedesktop.org/basedir-spec/latest/">XDG</a> configuration directory
+(usually <code class="docutils literal notranslate"><span class="pre">~/.config/photo_importinator/</span></code>).</p>
+<p>In both cases, you should create the <code class="docutils literal notranslate"><span class="pre">photo_importinator</span></code> folder
+in case it doesn’t exist, and why would it, if you haven’t used the
+app before - that’d be quite weird, right?</p>
+</section>
+<section id="configuration-file-sections">
+<h2>Configuration file sections<a class="headerlink" href="#configuration-file-sections" title="Link to this heading">¶</a></h2>
+<section id="backup">
+<h3>Backup<a class="headerlink" href="#backup" title="Link to this heading">¶</a></h3>
+<p>This section is currently empty and may be omitted. We no longer
+need a 7-Zip executable path as we use Python library for that.</p>
+</section>
+<section id="target">
+<h3>Target<a class="headerlink" href="#target" title="Link to this heading">¶</a></h3>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[Target]</span>
+<span class="n">default</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;NAS-SERVER&#39;</span>
+
+<span class="k">[Target.NAS-SERVER]</span>
+<span class="n">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;//NAS-SERVER/photos&#39;</span>
+<span class="n">backup_path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;C:/Data/PhotoDump&#39;</span>
+<span class="n">folder_structure</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;{year:04d}/{month:02d}/{day:02d}&#39;</span>
+</pre></div>
+</div>
+<p>The <cite>Target</cite> section defines the various targets where your files will end up in.
+<cite>default</cite> specifies the default which you’ll want to use; can be left
+undefined or as <cite>‘None’</cite> if you want no default to be set.</p>
+<p>Folder structure: Use slashes <cite>/</cite> for path separation here, even in Windows.
+The <cite>{stuff in curly braces}</cite> gets replaced by the number so named,
+using uses
+<a class="reference external" href="https://cheatography.com/brianallan/cheat-sheets/python-f-strings-number-formatting/">Python formatting rules</a>.
+Long story short:
+<code class="docutils literal notranslate"><span class="pre">:04d</span></code> in above template is “4-digit decimal, with leading zeros” and
+<code class="docutils literal notranslate"><span class="pre">:02d</span></code> is “2-digit decimal, with leading zeros”.
+This is flexible enough if you want the folders to have names like
+<em>2020 of the so-called Common Era/the month we counted as number 6/the day 10 of our monthly ordeal</em>
+(why would you, though), but if you want, say, actual month names,
+then this gets hella trickier.</p>
+<p>Some simple examples:</p>
+<ul class="simple">
+<li><p>YYYY/MM/DD: <code class="docutils literal notranslate"><span class="pre">'{year:04d}/{month:02d}/{day:02d}'</span></code></p></li>
+<li><p>YYYY-MM/DD: <code class="docutils literal notranslate"><span class="pre">'{year:04d}-{month:02d}/{day:02d}'</span></code></p></li>
+<li><p>YYYY-MM: <code class="docutils literal notranslate"><span class="pre">'{year:04d}-{month:02d}'</span></code></p></li>
+</ul>
+<p>…I hope you get the idea.</p>
+<p>Note how the target subsections are named in the configuration file. If you want your
+target to be named <code class="docutils literal notranslate"><span class="pre">BLAH</span></code>, then the configuration should be in the section called
+<code class="docutils literal notranslate"><span class="pre">[Target.BLAH]</span></code>. Same goes with the cameras below.</p>
+</section>
+<section id="conversion">
+<h3>Conversion<a class="headerlink" href="#conversion" title="Link to this heading">¶</a></h3>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[Conversion]</span>
+<span class="n">dnglab_path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;dnglab.exe&#39;</span>
+<span class="n">convert_flags</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s1">&#39;--dng-thumbnail&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;false&#39;</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>This specifies the path to dnglab executable,
+and the command-line flags given to the <cite>convert</cite> action.</p>
+</section>
+<section id="cloud">
+<h3>Cloud<a class="headerlink" href="#cloud" title="Link to this heading">¶</a></h3>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[Cloud]</span>
+<span class="n">Dropbox</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;Dropbox/Camera Uploads&#39;</span>
+<span class="n">OneDrive</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;OneDrive/Pictures/Camera Roll&#39;</span>
+</pre></div>
+</div>
+<p>These declare the <em>cloud sources</em>.
+The paths are relative to home directory/folder.</p>
+</section>
+<section id="cameras">
+<h3>Cameras<a class="headerlink" href="#cameras" title="Link to this heading">¶</a></h3>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[Cameras]</span>
+<span class="n">default</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;None&#39;</span>
+
+<span class="k">[Cameras.Nikon_D780]</span>
+<span class="n">card</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;D:&#39;</span>
+<span class="n">card_label</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;NIKON D780&#39;</span>
+<span class="n">ignore</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="s1">&#39;NC_FLLST.DAT&#39;</span><span class="w"> </span><span class="p">]</span>
+<span class="n">convert_raw</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="s1">&#39;.NEF&#39;</span><span class="w"> </span><span class="p">]</span>
+
+<span class="k">[Cameras.Nokia]</span>
+<span class="n">card</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;OneDrive&#39;</span>
+</pre></div>
+</div>
+<p>As with targets, the default camera can be specified here, or left as <cite>‘None’</cite>.</p>
+<p>For cameras, the only real required key is <cite>card</cite>. Just specify the drive letter
+in Windows, or mount point in POSIX-land. Or, if it’s a cloud source, just specify
+which!</p>
+<p>The <cite>card_label</cite> feature is not actually used anywhere, but one day I might
+<em>(might!)</em> implement card auto-detection. Or at least some
+verification doohickey. Just use whatever name the camera uses for the card
+for now.</p>
+<p><cite>ignore</cite> is a list of files that should be ignored. (In this example, some
+Nikon mystery data file.)</p>
+<p><cite>convert_raw</cite> should list which file extensions trigger the automatic DNG
+conversion using dnglab.</p>
+</section>
+</section>
+<section id="using-the-script-with-windows-terminal-and-powershell">
+<h2>Using the script with Windows Terminal and PowerShell<a class="headerlink" href="#using-the-script-with-windows-terminal-and-powershell" title="Link to this heading">¶</a></h2>
+<p>You can add something like this to your PowerShell profile
+(located at <code class="docutils literal notranslate"><span class="pre">C:\Users\[you]\Documents\WindowsPowerShell\Microsoft.PowerShell_profile.ps1</span></code>):</p>
+<div class="highlight-powershell notranslate"><div class="highlight"><pre><span></span><span class="k">function</span> <span class="n">photo_importinator</span> <span class="p">{</span>
+  <span class="nv">$photo_importinator_home</span><span class="p">=</span><span class="s2">&quot;C:\wherever_you_put_these_files\PhotoFlow\photo_importinator&quot;</span>
+  <span class="n">uv</span> <span class="n">run</span> <span class="p">-</span><span class="n">-project</span> <span class="p">${</span><span class="n">photo_importinator_home</span><span class="p">}</span> <span class="p">`</span>
+    <span class="s2">&quot;${photo_importinator_home}\photo_importinator.py&quot;</span> <span class="nv">$args</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>Change the <cite>$photo_importinator_home</cite> location appropriately to point to wherever you
+placed the files.</p>
+<p>After this, you can run the program in Windows Terminal with:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">PS C:\wherever&gt; photo_importinator</span>
+</pre></div>
+</div>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">PhotoFlow</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../geo_scooper/index.html">Geo Scooper</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Photo Importinator</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="history.html">History</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#overview">Overview</a></li>
+</ul>
+</li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">Photo Importinator</a><ul>
+      <li>Previous: <a href="history.html" title="previous chapter">Photo Importinator: History</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2026, Rose Midford.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

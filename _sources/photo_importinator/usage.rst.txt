@@ -1,0 +1,279 @@
+.. title:: Photo Importinator: Usage
+
+Photo Importinator: Usage
+=========================
+
+Other software that is needed to run Photo Importinator
+-------------------------------------------------------
+
+Python
+......
+
+This is a `Python <https://www.python.org/>`_ script, and it should work
+on a reasonably recent version of Python 3.
+
+Easiest way to run the program is by using the `uv` project manager
+(`see the uv home page <https://docs.astral.sh/uv/>`_), which makes it easy
+to get the right version of Python and fetch all PyPi dependencies
+automatically into an isolated virtual environment.
+
+Windows users have several options for installing `uv` as listed on the
+home page; I've installed it through `Scoop <https://scoop.sh/>`_, but it should work
+the same no matter where you get it.
+
+You can simply install `uv`, use it to fetch Python (or use the
+version you've installed by hand or from Linux distro).
+When you run the script using `uv run photo_importinator.py`,
+`uv` should find and fetch the required PyPi packages automatically.
+
+See below for how to make `uv` work nicely with PowerShell and
+Windows Terminal. (I haven't used `uv` on Linux yet, unfortunately,
+but I'm sure it'll make things easier over there.)
+
+External software needed
+........................
+
+You need `dnglab`_ for DNG conversion.
+
+.. _dnglab: https://github.com/dnglab/dnglab
+
+In Linux, there's probably a prebuilt package somewhere and you just
+need to know the full path to the software along the lines of
+`/usr/bin/dnglab` or whatever.
+
+In Windows, dnglab, as of writing, has no installer and doesn't appear to
+be in package management options (been a while since I checked though).
+Stick `dnglab.exe` wherever you can find it, but you need to remember
+the path to the file and set it in the configuration file as seen below.
+
+Terminology and basic premise
+-----------------------------
+
+The Photo Importinator moves (or converts) files from a *source* to a *target*.
+
+A *source* can be either
+
+- an SD card (technically speaking, a local volume with a
+  `DCIM`_ folder), or
+- a locally synced cloud drive (technically speaking, uh, any local folder
+  will do, as you need to provide your own cloud syncing solution anyway).
+
+.. _DCIM: https://en.wikipedia.org/wiki/Design_rule_for_Camera_File_system
+
+A *target* is any folder that your computer/user has access to. Usually,
+this is a NAS folder that is either mounted somewhere (in Windows, appears
+as a drive letter) or is accessible through a locator (in Windows, accessible
+through a server path *à la* ``\\NAS-SERVER\photos``). Each target also has
+a distinct way of organising files (e.g. "files in my NAS server should be
+organised under ``YEAR\MONTH\DAY`` hierarchy").
+
+What is a camera, anyway, when you really think about it?
+.........................................................
+
+A *camera* is, well, a convenient label we give for a particular source of
+photos. It's an internal label we use for settings for a particular scenario
+when we move images from that particular source.
+
+For example, I have a Nikon D780, and for the purposes of
+using this program, I have decided to arbitrarily call it ``Nikon_D780``.
+
+The camera uses SD cards, which, when I put them to the SD card reader,
+usually appear as drive `D:` on my computer. Whevever I format the
+card on the camera (as I do after every import), the gamera gives the card
+the volume label ``NIKON D780``. The camera puts one file in the DCIM
+folder, called `NC_FLLST.DAT`, which shouldn't be touched because none of
+the software I have at hand knows a darn about it. Also, being a Nikon camera,
+it uses `.NEF` raw files, which I prefer to be converted to the DNG format
+automatically. Also, backups will be stored in vein of
+`Nikon_D780_20241122.7z`, with the camera name and date stamp.
+
+We can now express all of this information like this:
+
+.. code-block:: toml
+
+   [Cameras.Nikon_D780]
+   card = 'D:'
+   card_label = 'NIKON D780'
+   ignore = [ 'NC_FLLST.DAT' ]
+   convert_raw = [ '.NEF' ]
+
+And now whever I refer to my Nikon D780, I can just tell Photo Importinator
+"I want photos from ``Nikon_D780``, please". Or:
+
+.. code-block:: console
+
+   > photo_importinator import Nikon_D780
+
+Or:
+
+.. code-block:: console
+
+   > photo_importinator i Nikon_D780
+
+No need to tell where the files come from (usually - Windows may sometimes use
+different drive letter, which can be overridden), no need to tell which files to
+ignore, no need to tell which files to convert. Nice! And since I have a default
+target set up, the one and only NAS I have, the importinator also knows where
+the files and backups go.
+
+So how do we configure the rest?
+
+Configuration file
+------------------
+
+The configuration file template is provides as ``photo_importinator_config.example.toml``.
+Copy the file to ``photo_importinator_config.toml`` in the appropriate configuration
+directory, edit it appropriately as needed, and you're good to go.
+
+The configuration directory is located in Local AppData in Windows
+(``C:\Users\[you]\AppData\Local\photo_importinator\``). In
+Windows Explorer, you can find it by entering ``%AppData%``
+in Explorer bar or `Win+R` dialog
+(you end up in your Roaming AppData), navigating up,
+and going to ``Local`` subfolder.
+
+In Linux and other POSIXy systems, it is located in your
+`XDG`_ configuration directory
+(usually ``~/.config/photo_importinator/``).
+
+.. _XDG: https://specifications.freedesktop.org/basedir-spec/latest/
+
+In both cases, you should create the ``photo_importinator`` folder
+in case it doesn't exist, and why would it, if you haven't used the
+app before - that'd be quite weird, right?
+
+Configuration file sections
+---------------------------
+
+Backup
+......
+
+.. code: toml
+
+   [Backup]
+
+This section is currently empty and may be omitted. We no longer
+need a 7-Zip executable path as we use Python library for that.
+
+Target
+......
+
+.. code-block:: toml
+
+   [Target]
+   default = 'NAS-SERVER'
+
+   [Target.NAS-SERVER]
+   path = '//NAS-SERVER/photos'
+   backup_path = 'C:/Data/PhotoDump'
+   folder_structure = '{year:04d}/{month:02d}/{day:02d}'
+
+The `Target` section defines the various targets where your files will end up in.
+`default` specifies the default which you'll want to use; can be left
+undefined or as `'None'` if you want no default to be set.
+
+Folder structure: Use slashes `/` for path separation here, even in Windows.
+The `{stuff in curly braces}` gets replaced by the number so named,
+using uses
+`Python formatting rules <https://cheatography.com/brianallan/cheat-sheets/python-f-strings-number-formatting/>`_.
+Long story short:
+``:04d`` in above template is "4-digit decimal, with leading zeros" and
+``:02d`` is "2-digit decimal, with leading zeros".
+This is flexible enough if you want the folders to have names like
+*2020 of the so-called Common Era/the month we counted as number 6/the day 10 of our monthly ordeal*
+(why would you, though), but if you want, say, actual month names,
+then this gets hella trickier.
+
+Some simple examples:
+
+- YYYY/MM/DD: ``'{year:04d}/{month:02d}/{day:02d}'``
+- YYYY-MM/DD: ``'{year:04d}-{month:02d}/{day:02d}'``
+- YYYY-MM: ``'{year:04d}-{month:02d}'``
+
+...I hope you get the idea.
+
+Note how the target subsections are named in the configuration file. If you want your
+target to be named ``BLAH``, then the configuration should be in the section called
+``[Target.BLAH]``. Same goes with the cameras below.
+
+Conversion
+..........
+
+.. code-block:: toml
+
+   [Conversion]
+   dnglab_path = 'dnglab.exe'
+   convert_flags = ['--dng-thumbnail', 'false']
+
+This specifies the path to dnglab executable,
+and the command-line flags given to the `convert` action.
+
+Cloud
+.....
+
+.. code-block:: toml
+
+   [Cloud]
+   Dropbox = 'Dropbox/Camera Uploads'
+   OneDrive = 'OneDrive/Pictures/Camera Roll'
+
+These declare the *cloud sources*.
+The paths are relative to home directory/folder.
+
+Cameras
+.......
+
+.. code-block:: toml
+
+   [Cameras]
+   default = 'None'
+
+   [Cameras.Nikon_D780]
+   card = 'D:'
+   card_label = 'NIKON D780'
+   ignore = [ 'NC_FLLST.DAT' ]
+   convert_raw = [ '.NEF' ]
+
+   [Cameras.Nokia]
+   card = 'OneDrive'
+
+As with targets, the default camera can be specified here, or left as `'None'`.
+
+For cameras, the only real required key is `card`. Just specify the drive letter
+in Windows, or mount point in POSIX-land. Or, if it's a cloud source, just specify
+which!
+
+The `card_label` feature is not actually used anywhere, but one day I might
+*(might!)* implement card auto-detection. Or at least some
+verification doohickey. Just use whatever name the camera uses for the card
+for now.
+
+`ignore` is a list of files that should be ignored. (In this example, some
+Nikon mystery data file.)
+
+`convert_raw` should list which file extensions trigger the automatic DNG
+conversion using dnglab.
+
+Using the script with Windows Terminal and PowerShell
+-----------------------------------------------------
+
+You can add something like this to your PowerShell profile
+(located at ``C:\Users\[you]\Documents\WindowsPowerShell\Microsoft.PowerShell_profile.ps1``):
+
+.. code-block:: powershell
+
+   function photo_importinator {
+     $photo_importinator_home="C:\wherever_you_put_these_files\PhotoFlow\photo_importinator"
+     uv run --project ${photo_importinator_home} `
+       "${photo_importinator_home}\photo_importinator.py" $args
+   }
+
+
+Change the `$photo_importinator_home` location appropriately to point to wherever you
+placed the files.
+
+After this, you can run the program in Windows Terminal with:
+
+.. code-block:: console
+
+   PS C:\wherever> photo_importinator
