@@ -25,7 +25,7 @@ def archive(source:Path, target:Path):
     """Archive all files under `source` to 7-Zip file `target`.
 
     TODO: This should probably be a bit more elegant. Yet, since this
-    part of the process can't really be parallelised, expressing these
+    part of the process can't really be made parallel, expressing these
     as photo_processing.Task isn't really feasible. So this is
     really just a helper function at this point.
     """
@@ -39,14 +39,14 @@ def archive(source:Path, target:Path):
         ' (', progressbar.ETA(), ') ',
     ]
     logger.info(f"Backing up {source} to {target}.")
-    with py7zr.SevenZipFile(target, 'w') as archive, \
-        progressbar.ProgressBar(max_value=total_size, \
+    with py7zr.SevenZipFile(target, 'w') as output_archive, \
+        progressbar.ProgressBar(max_value=total_size,
                                 widgets=progressbar_widgets) as bar:
         for file, size in backup_source_files:
             rel_file = file.relative_to(source)
             logger.info(f"Backup: {rel_file}")
             logger.debug(f"Full path {file}, size {size} bytes")
-            archive.write(file,rel_file)
+            output_archive.write(file, rel_file)
             bytes_so_far += size
             bar.update(bytes_so_far)
     arc_size = os.path.getsize(target)
@@ -55,7 +55,7 @@ def archive(source:Path, target:Path):
           f"{len(backup_source_files)} files, " + \
           f"{human_size(total_size)} bytes, " + \
           f"{human_size(arc_size)} compressed ({ratio:.2f}% of original))")
-    print(f":check_mark_button: Archival complete. " + \
+    print(f":white_check_mark-emoji: Archival complete. " + \
           f"{len(backup_source_files)} files, " + \
           f"{human_size(total_size)} bytes, " + \
           f"{human_size(arc_size)} compressed ({ratio:.2f}% of original)")
@@ -156,7 +156,7 @@ def human_size(size:int) -> str:
         c = size / (1024*1024)
         return f"{c:.1f} MiB"
     elif size > 1024:
-        c = size / (1024)
+        c = size / 1024
         return f"{c:.1f} KiB"
     else:
         return f"{size} Bytes"
