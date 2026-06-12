@@ -1,4 +1,0 @@
-exiv2
-lxml
-pykml
-diskcache

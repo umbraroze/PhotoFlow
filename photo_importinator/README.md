@@ -1,7 +1,7 @@
 # Photo Importinator
 
 *It imports photos!  
-This is suprisingly tricky and none of the apps I tried did it right!  
+This is surprisingly tricky and none of the apps I tried did it right!  
 ...So I wrote my own, dang it!*
 
 ## Overview
@@ -29,12 +29,18 @@ This is a [Python](https://www.python.org/) script, and it should work
 on a reasonably recent version of Python 3.
 
 Easiest way to run the program is by using the
-[`uv`](https://docs.astral.sh/uv/) project manager
+[uv](https://docs.astral.sh/uv/) project manager
 to handle virtual environment and PyPi dependency
-fetching.
+fetching. To install all required packages,
+just do:
 
-You also need [dnglab](https://github.com/dnglab/dnglab) and usually need to
-specify its location in the configuration file.
+```console
+> uv sync
+```
+
+You also need [dnglab](https://github.com/dnglab/dnglab).
+At the present, you probably need to specify its location in the 
+configuration file.
 
 ## Configuration
 

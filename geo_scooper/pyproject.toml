@@ -1,0 +1,15 @@
+[project]
+name = "geo_scooper"
+version = "1.0.0"
+description = "Extract geolocation tags from a set of photos and output them as KML."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    'exiv2',
+    'lxml',
+    'pykml',
+    'diskcache'
+]
+
+[project.scripts]
+geo_scooper = "geo_scooper:main"

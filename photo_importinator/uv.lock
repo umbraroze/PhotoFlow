@@ -273,7 +273,7 @@ wheels = [
 
 [[package]]
 name = "photo-importinator"
-version = "0.1.0"
+version = "3.0.0"
 source = { virtual = "." }
 dependencies = [
     { name = "colorama" },

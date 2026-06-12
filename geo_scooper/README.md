@@ -14,16 +14,22 @@ you like.
 This is a [Python](https://www.python.org/) script, and it should work
 on a reasonably recent version of Python 3.
 
-For Python modules, see the file
-[`requirements.txt`](requirements.txt) for a list of what's needed.
-You can install them with `pip install -r requirements.txt`.
+Easiest way to run the program is by using the
+[uv](https://docs.astral.sh/uv/) project manager
+to handle virtual environment and PyPi dependency
+fetching. To install all required packages,
+just do:
+
+```console
+> uv sync
+```
 
 ## Usage
 
 Nothing too complicated, I hope:
 
 ```console
-> geo_scooper --input INPUTDIR --output outputfile.kml --verbose
+> uv run geo_scooper.py --input INPUTDIR --output outputfile.kml --verbose
 ```
 
 (or `-i`, `-o`, `-v`) Input directory and the output file are required,
