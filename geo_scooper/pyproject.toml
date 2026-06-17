@@ -10,6 +10,3 @@ dependencies = [
     'pykml',
     'diskcache'
 ]
-
-[project.scripts]
-geo_scooper = "geo_scooper:main"

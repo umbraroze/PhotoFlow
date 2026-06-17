@@ -7,92 +7,99 @@
 # for the full license terms.
 ##########################################################################
 
-# builtins
+# Python builtins
 import os, sys
 import re
 import getopt
 import datetime
 import pickle
 
-# via PIP
+# PyPi packages
 import exiv2
 from lxml import etree
-from pykml.factory import KML_ElementMaker as KML
-from pykml.factory import GX_ElementMaker as GX
+from pykml.factory import KML_ElementMaker
+from pykml.factory import GX_ElementMaker
 from diskcache import Cache
+
 
 ##########################################################################
 
 def make_extended_data(values: dict):
     """Creates a KML ExtendedData tag structure from the dict of given values."""
     # FIXME: Return type???
-    ed = KML.ExtendedData()
+    ed = KML_ElementMaker.ExtendedData()
     for k in values.keys():
-        d = KML.Data(name=k)
-        v = KML.value(values[k])
+        d = KML_ElementMaker.Data(name=k)
+        v = KML_ElementMaker.value(values[k])
         d.append(v)
         ed.append(d)
     return ed
 
-def make_geo_timestamp(time,lat,lon):
+
+def make_geo_timestamp(time: str, lat: str, lon: str):
     """Creates a KML camera data time stamp with latitude and longitude."""
     # FIXME: Return type???
-    return KML.Camera(
-        GX.TimeStamp(KML.when(time)),
-        KML.latitude(lat),
-        KML.longitude(lon)
+    return KML_ElementMaker.Camera(
+        GX_ElementMaker.TimeStamp(KML_ElementMaker.when(time)),
+        KML_ElementMaker.latitude(lat),
+        KML_ElementMaker.longitude(lon)
     )
 
-def parse_exif_date(date: str) -> datetime:
-    """Parses Exif datestamp into a datetime structure.
+
+def parse_exif_date(date: str) -> datetime.datetime | None:
+    """Parses Exif datestamp string into a datetime structure.
     Will return None if date cannot be parsed."""
     try:
-        return datetime.datetime.strptime(str(date),'%Y:%m:%d %H:%M:%S')
+        return datetime.datetime.strptime(str(date), '%Y:%m:%d %H:%M:%S')
     except ValueError:
         return None
 
-def parse_exif_rational(frac: str) -> float:
-    """Parses a fraction given as a string and returns it as a float.
-    Will return 0.0 if either numerator or denominator is 0."""
-    [(a,b)] = re.findall(r"(\d+)/(\d+)",frac)
-    if a == "0" or b == "0":
-        return 0.0
-    return float(a)/float(b)
 
-def parse_exif_coords(lat: str, lon: str, lat_ref: str, lon_ref: str) -> tuple[float,float]:
+def parse_exif_rational(frac: str) -> float:
+    """Parses a fraction given as a string and returns it as a float."""
+    [(a, b)] = re.findall(r"(\d+)/(\d+)", frac)
+    a, b = float(a), float(b)
+    if b == 0:
+        raise ZeroDivisionError(f"Exif coordinate fraction {frac} has 0 as a denominator")
+    if a == 0:
+        return 0.0
+    return a / b
+
+
+def parse_exif_coords(lat: str, lon: str, lat_ref: str, lon_ref: str) -> tuple[float, float]:
     """Parses Exif coordinates.
     
     In Exif data, both latitude and longitude are given as string with
     three fractional values separated by spaces, representing
     degrees, minutes and seconds. (e.g. "123/456 123/456 123/456")
-    Reference is given as a single chracter ('N','E','S','W').
+    Reference is given as a single character ('N','E','S','W').
 
     This function will parse the fractional values and converts them
     to a pair of signed float values, as used in KML files to
     represent coordinates."""
 
     # Parse latitude into fractions
-    [(lat_deg_frac,lat_min_frac,lat_sec_frac)] = \
-        re.findall(r"(\d+/\d+)\s+(\d+/\d+)\s+(\d+/\d+)",str(lat))
+    [(lat_deg_frac, lat_min_frac, lat_sec_frac)] = \
+        re.findall(r"(\d+/\d+)\s+(\d+/\d+)\s+(\d+/\d+)", str(lat))
     # Convert fractions into floats
     lat_deg, lat_min, lat_sec = \
         parse_exif_rational(lat_deg_frac), \
-        parse_exif_rational(lat_min_frac), \
-        parse_exif_rational(lat_sec_frac)
+            parse_exif_rational(lat_min_frac), \
+            parse_exif_rational(lat_sec_frac)
     # Parse longitude into fractions
-    [(lon_deg_frac,lon_min_frac,lon_sec_frac)] = \
-        re.findall(r"(\d+/\d+)\s+(\d+/\d+)\s+(\d+/\d+)",str(lon))
+    [(lon_deg_frac, lon_min_frac, lon_sec_frac)] = \
+        re.findall(r"(\d+/\d+)\s+(\d+/\d+)\s+(\d+/\d+)", str(lon))
     # Convert fractions into floats
     lon_deg, lon_min, lon_sec = \
         parse_exif_rational(lon_deg_frac), \
-        parse_exif_rational(lon_min_frac), \
-        parse_exif_rational(lon_sec_frac)
+            parse_exif_rational(lon_min_frac), \
+            parse_exif_rational(lon_sec_frac)
 
     # Convert latitude from degrees/minutes/seconds into a float.
     lat_d = float(lat_deg) + \
-        (float(lat_min)*(1/60)) + \
-        (float(lat_sec)*(1/60)*(1/60))
-    # If we're on southern hemisphere, flip the sign
+            (float(lat_min) * (1 / 60)) + \
+            (float(lat_sec) * (1 / 60) * (1 / 60))
+    # If we're on the Southern Hemisphere, flip the sign
     if str(lat_ref) == 'S':
         lat_d = -lat_d
     # Sanity check.
@@ -100,22 +107,24 @@ def parse_exif_coords(lat: str, lon: str, lat_ref: str, lon_ref: str) -> tuple[f
         raise ValueError(f"Latitude reference {str(lat_ref)} is neither N or S")
     # Convert longitude from degrees/minutes/seconds into a float.
     lon_d = float(lon_deg) + \
-        (float(lon_min)*(1/60)) + \
-        (float(lon_sec)*(1/60)*(1/60))
-    # If we're on western hemisphere, flip the sign
+            (float(lon_min) * (1 / 60)) + \
+            (float(lon_sec) * (1 / 60) * (1 / 60))
+    # If we're on the Western Hemisphere, flip the sign
     if str(lon_ref) == 'W':
         lon_d = -lon_d
     # Sanity check.
     if str(lon_ref) != 'E':
         raise ValueError(f"Longitude reference {str(lon_ref)} is neither W or E")
     # And we have our values now!
-    return (lat_d,lon_d)
+    return lat_d, lon_d
+
 
 class SkippedFileException(Exception):
     pass
 
+
 # Read the image EXIF data
-def read_exif(file):
+def read_exif(file) -> tuple[datetime.datetime, float, float]:
     global verbose_mode
     try:
         img = exiv2.ImageFactory.open(file)
@@ -145,21 +154,22 @@ def read_exif(file):
     try:
         lat, lon, lat_ref, lon_ref = \
             str(data['Exif.GPSInfo.GPSLatitude'].value()), \
-            str(data['Exif.GPSInfo.GPSLongitude'].value()), \
-            str(data['Exif.GPSInfo.GPSLatitudeRef'].value()), \
-            str(data['Exif.GPSInfo.GPSLongitudeRef'].value())
+                str(data['Exif.GPSInfo.GPSLongitude'].value()), \
+                str(data['Exif.GPSInfo.GPSLatitudeRef'].value()), \
+                str(data['Exif.GPSInfo.GPSLongitudeRef'].value())
         kml_lat, kml_lon = parse_exif_coords(lat, lon, lat_ref, lon_ref)
     except exiv2.Exiv2Error:
         if verbose_mode:
             print(" - No coordinates found, skipping")
         raise SkippedFileException
 
-    return (date,kml_lat,kml_lon)
+    return date, kml_lat, kml_lon
+
 
 ##########################################################################
 
 # Command line parameters parsing
-# TODO: Convert this to use argparse instead of getopt
+# TODO: Convert this to use typer instead of getopt
 
 # Globals.
 verbose_mode = False
@@ -169,10 +179,11 @@ cache_file = None
 caching = False
 cache = None
 
+
 def parse_command_line():
     global input_dir, output_file, cache_file, caching, verbose_mode
     try:
-        opts, _ = getopt.getopt(sys.argv[1:], "i:o:c:v", ["input=", "output=","cache=","verbose"])
+        opts, _ = getopt.getopt(sys.argv[1:], "i:o:c:v", ["input=", "output=", "cache=", "verbose"])
     except getopt.GetoptError as err:
         print(err)
         print("Usage: photo_geo_scooper [-i inputdir] [-o output.kml] [-v]")
@@ -209,36 +220,36 @@ def main():
         cache = Cache(cache_file)
 
     # New KML document
-    kml = KML.kml(KML.Document())
+    kml = KML_ElementMaker.kml(KML_ElementMaker.Document())
 
     # Walk the input directory
     for root, dirs, files in os.walk(input_dir):
         path = root.split(os.sep)
         for file in files:
             # Get the file's full name
-            fqfile = os.sep.join(path)+os.sep+file
+            fq_file = os.sep.join(path) + os.sep + file
             # Skip non-files
-            if not os.path.isfile(fqfile):
+            if not os.path.isfile(fq_file):
                 continue
             # OK, we're cool, continuing
             if verbose_mode:
-                print(f"Processing {fqfile}")
-            
+                print(f"Processing {fq_file}")
+
             # Get the file's last modified time
-            mtime = os.path.getmtime(fqfile)
+            mtime = os.path.getmtime(fq_file)
 
             # Read the exif data (via cache possibly)
             if caching:
                 # Yes we do caching and yes this gets complicated
                 try:
-                    cdata = pickle.loads(cache[fqfile])
+                    cdata = pickle.loads(cache[fq_file])
                 except KeyError:
                     cdata = None
                 if cdata is None or mtime > cdata['mtime']:
                     # Cache doesn't exist or is too old.
-                    # Come up with brand new data and cache it.
+                    # Come up with the new data and cache it.
                     try:
-                        date, kml_lat, kml_lon = read_exif(fqfile)
+                        date, kml_lat, kml_lon = read_exif(fq_file)
                     except SkippedFileException:
                         # If no sufficient data, save anyway
                         cdata = dict()
@@ -246,7 +257,7 @@ def main():
                         cdata['date'] = None
                         cdata['kml_lat'] = None
                         cdata['kml_lon'] = None
-                        cache[fqfile] = pickle.dumps(cdata)
+                        cache[fq_file] = pickle.dumps(cdata)
                         # And off we go to the next file then
                         continue
                     # OK, here's the regular data
@@ -255,7 +266,7 @@ def main():
                     cdata['date'] = date
                     cdata['kml_lat'] = kml_lat
                     cdata['kml_lon'] = kml_lon
-                    cache[fqfile] = pickle.dumps(cdata)
+                    cache[fq_file] = pickle.dumps(cdata)
                 else:
                     # Cache is valid
                     # Retrieve cached values
@@ -273,7 +284,7 @@ def main():
             else:
                 # No caching magic, just read the damn thing
                 try:
-                    date, kml_lat, kml_lon = read_exif(fqfile)
+                    date, kml_lat, kml_lon = read_exif(fq_file)
                 except SkippedFileException:
                     continue
 
@@ -289,21 +300,22 @@ def main():
 
             # Construct the KML data
             ed = {
-                "Path": fqfile,
+                "Path": fq_file,
                 "Date": date.strftime("%Y-%m-%dT%H:%M:%S"),
             }
-            place_mark = KML.Placemark( 
-                KML.name(file),
-                make_geo_timestamp(date.strftime("%Y-%m-%dT%H:%M:%S"),kml_lat,kml_lon),
+            place_mark = KML_ElementMaker.Placemark(
+                KML_ElementMaker.name(file),
+                make_geo_timestamp(date.strftime("%Y-%m-%dT%H:%M:%S"), kml_lat, kml_lon),
                 make_extended_data(ed)
             )
             # ...and put it on the file!
             kml.Document.append(place_mark)
 
     # Write the KML document to file.
-    f = open(output_file,"wb")
-    f.write(etree.tostring(kml,pretty_print=True))
+    f = open(output_file, "wb")
+    f.write(etree.tostring(kml, pretty_print=True))
     f.close()
+
 
 if __name__ == '__main__':
     main()
