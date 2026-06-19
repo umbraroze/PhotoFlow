@@ -65,6 +65,9 @@ def archive(source:Path, target:Path):
 def unpack_all(configuration:Configuration):
     """Unarchive all .zip and .7z archives in the target card, per given configuration."""
 
+    # Total count of unpacked files
+    total_count = 0
+
     # Sanity checks before proceeding
     if not configuration.is_cloud_source():
         logger.error(f"Unpack all: {configuration.camera} is not a cloud source")
@@ -101,6 +104,7 @@ def unpack_all(configuration:Configuration):
                         archive_file.extract(entry, source)
                         print(f":white_check_mark-emoji: Extracted {out_path}")
                         logger.debug(f"Unpacked {out_path}")
+                        total_count = total_count + 1
                     else:
                         print(f":cross_mark_button-emoji: [yellow]Skipped: {out_path}[/yellow] (Dry run)")
                         logger.debug(f"Dry run: would have unpacked {out_path}")
@@ -109,6 +113,9 @@ def unpack_all(configuration:Configuration):
                 logger.info(f"Deleted successfully unpacked file {file}")
             else:
                 logger.debug(f"Didn't delete the original")
+    if total_count > 0:
+        print(f"[bright_white]{total_count} files unpacked in total[/bright_white]")
+        logger.info(f"{total_count} files unpacked in total")
 
 ###### Archival-related utility functions ################################
 
