@@ -12,9 +12,9 @@ import logging
 from zipfile import ZipFile
 
 import py7zr
-import zipfile
 from dazzle import *
 from rich import print
+from rich.progress import Progress, SpinnerColumn, FileSizeColumn, TotalFileSizeColumn
 from configuration import Configuration
 
 logger = logging.getLogger(__name__)
@@ -31,34 +31,31 @@ def archive(source:Path, target:Path):
     """
     backup_source_files = enumerate_source(source)
     total_size = total_source_size(backup_source_files)
-    bytes_so_far = 0
-    progressbar_widgets=[
-        ' [', progressbar.Timer(), '] ',
-        progressbar.Bar(),
-        ' (', progressbar.DataSize(), ' / ', human_size(total_size), ') ',
-        ' (', progressbar.ETA(), ') ',
-    ]
     logger.info(f"Backing up {source} to {target}.")
     with py7zr.SevenZipFile(target, 'w') as output_archive, \
-        progressbar.ProgressBar(max_value=total_size,
-                                widgets=progressbar_widgets) as bar:
+        Progress(
+            SpinnerColumn(),
+            *Progress.get_default_columns(),
+            ' | ',
+            FileSizeColumn(),
+            '/',
+            TotalFileSizeColumn()
+        ) as bar:
+        bar_task = bar.add_task("[yellow]Backing up...", total=total_size)
         for file, size in backup_source_files:
             rel_file = file.relative_to(source)
-            logger.info(f"Backup: {rel_file}")
+            logger.info(f"Backing up: {rel_file}")
             logger.debug(f"Full path {file}, size {size} bytes")
+            print(f"Backing up: {rel_file}")
             output_archive.write(file, rel_file)
-            bytes_so_far += size
-            bar.update(bytes_so_far)
+            bar.update(bar_task,advance=size)
     arc_size = os.path.getsize(target)
     ratio = (arc_size / total_size) * 100
-    logger.info("Archival complete. "+ \
-          f"{len(backup_source_files)} files, " + \
+    report = f"{len(backup_source_files)} files, " + \
           f"{human_size(total_size)} bytes, " + \
-          f"{human_size(arc_size)} compressed ({ratio:.2f}% of original))")
-    print(f":white_check_mark-emoji: Archival complete. " + \
-          f"{len(backup_source_files)} files, " + \
-          f"{human_size(total_size)} bytes, " + \
-          f"{human_size(arc_size)} compressed ({ratio:.2f}% of original)")
+          f"{human_size(arc_size)} compressed ({ratio:.2f}% of original))"
+    logger.info(f"Archival complete. {report}")
+    success(f"Archival complete. {report}")
 
 ###### Unarchiving task ##################################################
 
@@ -95,11 +92,22 @@ def unpack_all(configuration:Configuration):
             if not file.suffix in ['.7z','.zip']:
                 continue
             if file.suffix == '.7z':
-                die("Unimplemented")
+                die("7-zip files unpacking is unimplemented")
             print(f"Unarchive file: {file}")
-            with ZipFile(file,'r') as archive_file:
+            with (ZipFile(file,'r') as archive_file,
+                  Progress(SpinnerColumn(),*Progress.get_default_columns()) as bar):
+                bar_task = bar.add_task("[white]Unpacking...",
+                                        total=len(archive_file.filelist))
                 for entry in archive_file.filelist:
+                    # The target path. NB: only the filename is used, the preceding path
+                    # in the original archive file's path is ignored.
                     out_path = source / Path(entry.filename)
+                    # Skip if the target file exists
+                    if out_path.exists():
+                        skip_warn(f"Target file {out_path} already exists")
+                        logger.warning(f"Target file {out_path} already exists, skipped")
+                        bar.update(bar_task, advance=1)
+                        continue
                     if not configuration.dry_run:
                         archive_file.extract(entry, source)
                         print(f":white_check_mark-emoji: Extracted {out_path}")
@@ -108,13 +116,14 @@ def unpack_all(configuration:Configuration):
                     else:
                         print(f":cross_mark_button-emoji: [yellow]Skipped: {out_path}[/yellow] (Dry run)")
                         logger.debug(f"Dry run: would have unpacked {out_path}")
+                    bar.update(bar_task,advance=1)
             if not (configuration.leave_originals or configuration.dry_run):
                 os.unlink(file)
                 logger.info(f"Deleted successfully unpacked file {file}")
             else:
                 logger.debug(f"Didn't delete the original")
     if total_count > 0:
-        print(f"[bright_white]{total_count} files unpacked in total[/bright_white]")
+        success(f"{total_count} files unpacked in total")
         logger.info(f"{total_count} files unpacked in total")
 
 ###### Archival-related utility functions ################################
@@ -143,7 +152,7 @@ def enumerate_source(source:Path) -> list:
         for file in files:
             file = Path(root) / file
             if not os.path.isfile(file):
-                next
+                continue
             if not os.access(file,os.R_OK):
                 logger.error(f"Backup: File {file} isn't readable.")
                 raise IOError(f"File {file} isn't readable")
@@ -154,8 +163,8 @@ def enumerate_source(source:Path) -> list:
 def human_size(size:int) -> str:
     """Return `size` byte count as a human-friendly value."""
     
-    # TODO: There's python_utils.converters.scale_1024() too? (python_utils is an
-    # indirect pypi requirement from progressbar2)
+    # TODO: There's python_utils.converters.scale_1024() too?
+    # (Might need to add python_utils as an explicit requirement though)
     if size > 1024*1024*1024:
         c = size / (1024*1024*1024)
         return f"{c:.1f} GiB"

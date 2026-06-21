@@ -9,7 +9,5 @@ dependencies = [
     'py7zr',
     'typer',
     'rich',
-    'colorama',
-    'progressbar2',
     'deprecated',
 ]

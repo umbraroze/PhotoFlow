@@ -18,6 +18,7 @@ import subprocess
 import shutil
 import exiv2
 from rich import print
+from rich.progress import Progress, SpinnerColumn
 from dazzle import *
 import archival
 from configuration import Configuration
@@ -380,5 +381,11 @@ class ImportQueue:
 
     def run(self):
         """Run all of the tasks in the queue."""
-        for job in self.jobs:
-            job.execute()
+        with Progress(
+            SpinnerColumn(),
+            *Progress.get_default_columns()
+        ) as bar:
+            bar_task = bar.add_task("[yellow]Running queued jobs...",total=len(self.jobs))
+            for job in self.jobs:
+                job.execute()
+                bar.update(bar_task,advance=1)

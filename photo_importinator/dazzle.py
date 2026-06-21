@@ -11,14 +11,14 @@ from rich import print
 from rich.console import Console
 from rich.panel import Panel
 from rich.text import Text
-import progressbar
 
 console = Console()
 
 def endazzle_terminal():
     """Initialise terminal window so that it can accept "fancy" output."""
-    # Make sure progressbar magic can happen
-    progressbar.streams.wrap_stderr()
+    # Not really needed much these days. If rich needs more initialisation stuff,
+    # it should go here.
+    pass
 
 def print_separator_line():
     console.rule('',style='cyan')
@@ -27,6 +27,9 @@ def print_boxed_text(message:str):
     """Prints text inside a box."""
     print(Panel(Text.styled(message,style='bright_red',justify='center'),border_style='cyan'))
 
+def success(message:str):
+    """Prints out a message about successful operation."""
+    print(f":white_check_mark-emoji: [bright_white]{message}[/bright_white]")
 def skip_warn(message:str):
     """Prints a skip warning message.
     It is preceded by a skip icon emoji and displayed in bold."""
