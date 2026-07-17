@@ -19,7 +19,7 @@ specify the camera you're using, and the script will do the rest.
 
 ## Geo Scooper
 
-(See the [`geo_scooper`](geo_scooper/) subdirectory)
+(See the [`photo-geo-scooper`](photo-geo-scooper/) subdirectory)
 
 Python script that will read the geotags from all of the images
 in a given directory and will spit out a KML file suitable for

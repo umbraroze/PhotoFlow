@@ -1,5 +1,5 @@
 [project]
-name = "geo_scooper"
+name = "photo-geo-scooper"
 version = "1.0.0"
 description = "Extract geolocation tags from a set of photos and output them as KML."
 readme = "README.md"
