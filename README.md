@@ -11,7 +11,7 @@ For extensive documentation, please see the
 
 ## Photo Importinator
 
-(See the [`photo_importinator`](photo_importinator/) subdirectory)
+(See the [`photo-importinator`](photo-importinator/) subdirectory)
 
 This script will import images to a NAS, creating a backup archive.
 The aim is to minimise the user hassle: usually, you only need to

@@ -1,5 +1,5 @@
 [project]
-name = "photo_importinator"
+name = "photo-importinator"
 version = "3.0.0"
 description = "Imports photos from camera to your photo repository and backs them up."
 readme = "README.md"
