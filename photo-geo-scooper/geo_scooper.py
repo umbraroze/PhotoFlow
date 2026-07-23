@@ -7,20 +7,24 @@
 # for the full license terms.
 ##########################################################################
 
-# Python builtins
-import os, sys
+import os
+import sys
 import re
-import getopt
 import datetime
 import pickle
+from pathlib import Path
+from dataclasses import dataclass
+from typing import Annotated
 
-# PyPi packages
 import exiv2
 from lxml import etree
 from pykml.factory import KML_ElementMaker
 from pykml.factory import GX_ElementMaker
 from diskcache import Cache
+import typer
+from rich import print
 
+app = typer.Typer()
 
 ##########################################################################
 
@@ -36,7 +40,7 @@ def make_extended_data(values: dict):
     return ed
 
 
-def make_geo_timestamp(time: str, lat: str, lon: str):
+def make_geo_timestamp(time: str, lat: float|int, lon: float|int):
     """Creates a KML camera data time stamp with latitude and longitude."""
     # FIXME: Return type???
     return KML_ElementMaker.Camera(
@@ -55,15 +59,15 @@ def parse_exif_date(date: str) -> datetime.datetime | None:
         return None
 
 
-def parse_exif_rational(frac: str) -> float:
+def parse_exif_rational(frac: str) -> float | int:
     """Parses a fraction given as a string and returns it as a float."""
-    [(a, b)] = re.findall(r"(\d+)/(\d+)", frac)
-    a, b = float(a), float(b)
+    [(x, y)] = re.findall(r"(\d+)/(\d+)", frac)
+    a, b = float(x), float(y)
     if b == 0:
         raise ZeroDivisionError(f"Exif coordinate fraction {frac} has 0 as a denominator")
     if a == 0:
         return 0.0
-    return a / b
+    return float(a / b)
 
 
 def parse_exif_coords(lat: str, lon: str, lat_ref: str, lon_ref: str) -> tuple[float, float]:
@@ -125,29 +129,18 @@ class SkippedFileException(Exception):
 
 # Read the image EXIF data
 def read_exif(file) -> tuple[datetime.datetime, float, float]:
-    global verbose_mode
     try:
         img = exiv2.ImageFactory.open(file)
     except exiv2.Exiv2Error:
-        if verbose_mode:
-            print(" - This file can't be read by Exiv2. Skipping.")
-        raise SkippedFileException
+        raise SkippedFileException("File can't be read by exiv2")
     img.readMetadata()
     data = img.exifData()
-    #for k in data:
-    #    print(k)
     date_raw = data["Exif.Photo.DateTimeOriginal"].getValue()
     if date_raw is None:
-        if verbose_mode:
-            print(" - No date found, skipping")
-        raise SkippedFileException
+        raise SkippedFileException("No date found")
     date = parse_exif_date(str(date_raw))
     if date is None:
-        if verbose_mode:
-            print(" - Date unparseable, skipping")
-        raise SkippedFileException
-    if verbose_mode:
-        print(f" - Date: {date}")
+        raise SkippedFileException("Date unparseable")
 
     # Read the GPS coordinates and convert them to KML style decimal coordinates
     # FIXME later: ok, so value() works, but what the heck was up with getValue() above???
@@ -159,140 +152,107 @@ def read_exif(file) -> tuple[datetime.datetime, float, float]:
                 str(data['Exif.GPSInfo.GPSLongitudeRef'].value())
         kml_lat, kml_lon = parse_exif_coords(lat, lon, lat_ref, lon_ref)
     except exiv2.Exiv2Error:
-        if verbose_mode:
-            print(" - No coordinates found, skipping")
-        raise SkippedFileException
+        raise SkippedFileException("No coordinates found")
 
     return date, kml_lat, kml_lon
 
 
+def read_exif_from_cache(fq_file: Path, cache: Cache) -> tuple[datetime.datetime, float, float]:
+    # Get the file's last modified time
+    mtime = os.path.getmtime(fq_file)
+    try:
+        cdata: dict | None = pickle.loads(cache[str(fq_file)])
+    except KeyError:
+        cdata = None
+    if cdata is None or mtime > cdata['mtime']:
+        # Cache doesn't exist or is too old.
+        # Come up with the new data and cache it.
+        try:
+            date, kml_lat, kml_lon = read_exif(fq_file)
+        except SkippedFileException:
+            # If no sufficient data, save anyway
+            cdata: dict = dict()
+            cdata['mtime'] = mtime
+            cdata['date'] = None
+            cdata['kml_lat'] = None
+            cdata['kml_lon'] = None
+            cache[str(fq_file)] = pickle.dumps(cdata)
+            # And off we go to the next file then. Signal the
+            # caller that we skipped the file.
+            raise
+        # OK, here's the regular data
+        cdata: dict = dict()
+        cdata['mtime'] = mtime
+        cdata['date'] = date
+        cdata['kml_lat'] = kml_lat
+        cdata['kml_lon'] = kml_lon
+        cache[str(fq_file)] = pickle.dumps(cdata)
+        return date, kml_lat, kml_lon
+    else:
+        # Cache is valid-ish, retrieve cached values
+        date: datetime.datetime | None = cdata['date']
+        kml_lat = cdata['kml_lat']
+        kml_lon = cdata['kml_lon']
+        if date is None:
+            # Well there's no data for this then
+            raise SkippedFileException("No coordinates found")
+        return date, kml_lat, kml_lon
+
 ##########################################################################
 
-# Command line parameters parsing
-# TODO: Convert this to use typer instead of getopt
-
-# Globals.
-verbose_mode = False
-input_dir = "."
-output_file = "output.kml"
-cache_file = None
-caching = False
-cache = None
-
-
-def parse_command_line():
-    global input_dir, output_file, cache_file, caching, verbose_mode
-    try:
-        opts, _ = getopt.getopt(sys.argv[1:], "i:o:c:v", ["input=", "output=", "cache=", "verbose"])
-    except getopt.GetoptError as err:
-        print(err)
-        print("Usage: photo_geo_scooper [-i inputdir] [-o output.kml] [-v]")
-        sys.exit(2)
-    for o, a in opts:
-        if o in ("-i", "--input"):
-            input_dir = a
-        elif o in ("-o", "--output"):
-            output_file = a
-        elif o in ("-c", "--cache"):
-            cache_file = a
-            caching = True
-        elif o == "-v":
-            verbose_mode = True
-
-
-def main():
-    global input_dir, output_file, cache_file, caching, cache, verbose_mode
-
-    # Parse command line
-    parse_command_line()
-
+@app.command()
+def main(input_dir: Annotated[Path, typer.Option(help="Input directory.")] = Path("."),
+         output_file:Annotated[Path, typer.Option(help="Output file.")] = Path("output.kml"),
+         cache_dir: Annotated[Path | None, typer.Option(help="Cache directory location. If unspecified, caching is disabled.")] = None,
+         verbose:Annotated[bool, typer.Option(help="Verbose mode.")] = False):
     # Print out our settings.
-    if verbose_mode:
+    if verbose:
         print(f"Input dir: {input_dir}")
         print(f"Output file: {output_file}")
-        if cache_file is not None:
-            print(f"Cache location: {cache_file}")
+        if cache_dir is not None:
+            print(f"Cache location: {cache_dir}")
         else:
             print("Caching disabled")
 
     # Set up cache
-    if caching:
-        cache = Cache(cache_file)
+    if cache_dir is not None:
+        cache = Cache(str(cache_dir))
+    else:
+        cache = None
 
     # New KML document
     kml = KML_ElementMaker.kml(KML_ElementMaker.Document())
 
     # Walk the input directory
     for root, dirs, files in os.walk(input_dir):
-        path = root.split(os.sep)
         for file in files:
             # Get the file's full name
-            fq_file = os.sep.join(path) + os.sep + file
+            fq_file = Path(root) / file
             # Skip non-files
-            if not os.path.isfile(fq_file):
+            if not fq_file.is_file():
                 continue
             # OK, we're cool, continuing
-            if verbose_mode:
+            if verbose:
                 print(f"Processing {fq_file}")
 
-            # Get the file's last modified time
-            mtime = os.path.getmtime(fq_file)
-
             # Read the exif data (via cache possibly)
-            if caching:
-                # Yes we do caching and yes this gets complicated
-                try:
-                    cdata = pickle.loads(cache[fq_file])
-                except KeyError:
-                    cdata = None
-                if cdata is None or mtime > cdata['mtime']:
-                    # Cache doesn't exist or is too old.
-                    # Come up with the new data and cache it.
-                    try:
-                        date, kml_lat, kml_lon = read_exif(fq_file)
-                    except SkippedFileException:
-                        # If no sufficient data, save anyway
-                        cdata = dict()
-                        cdata['mtime'] = mtime
-                        cdata['date'] = None
-                        cdata['kml_lat'] = None
-                        cdata['kml_lon'] = None
-                        cache[fq_file] = pickle.dumps(cdata)
-                        # And off we go to the next file then
-                        continue
-                    # OK, here's the regular data
-                    cdata = dict()
-                    cdata['mtime'] = mtime
-                    cdata['date'] = date
-                    cdata['kml_lat'] = kml_lat
-                    cdata['kml_lon'] = kml_lon
-                    cache[fq_file] = pickle.dumps(cdata)
+            try:
+                if cache is not None:
+                    date, kml_lat, kml_lon = read_exif_from_cache(fq_file, cache)
                 else:
-                    # Cache is valid
-                    # Retrieve cached values
-                    if verbose_mode:
-                        print(" - File unmodified, cached values used")
-                    date = cdata['date']
-                    kml_lat = cdata['kml_lat']
-                    kml_lon = cdata['kml_lon']
-                    if date is None:
-                        # Well there's no data for this then
-                        if verbose_mode:
-                            print(" - No coordinates found, skipping")
-                        continue
-
-            else:
-                # No caching magic, just read the damn thing
-                try:
                     date, kml_lat, kml_lon = read_exif(fq_file)
-                except SkippedFileException:
-                    continue
+            except SkippedFileException:
+                # Print skip reason
+                if verbose and (sys.exception() is not None):
+                    print(sys.exception())
+                continue
 
-            if verbose_mode:
+            # At this point, we have data, kml_lat and kml_lon
+            if verbose:
                 print(f" - Coordinates: {kml_lat},{kml_lon}")
             # ...but wait! Did we somehow get pointed to the Null Island?
             if kml_lat == 0.0 and kml_lon == 0.0:
-                if verbose_mode:
+                if verbose:
                     print(" - Coordinates are probably bogus, skipping this one")
                 continue
             # Right! With that out of the way, we can be reasonably sure we indeed have
@@ -316,6 +276,5 @@ def main():
     f.write(etree.tostring(kml, pretty_print=True))
     f.close()
 
-
 if __name__ == '__main__':
-    main()
+    app()

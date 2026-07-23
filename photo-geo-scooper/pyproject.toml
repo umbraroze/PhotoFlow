@@ -8,5 +8,7 @@ dependencies = [
     'exiv2',
     'lxml',
     'pykml',
-    'diskcache'
+    'diskcache',
+    'typer',
+    'rich'
 ]
