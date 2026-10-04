@@ -72,24 +72,50 @@ do what we please!
 
 ...Let's get back to my tale about image importing.
 
-For a while after that, I just copied stuff over with
-`exiftool`_. Not the perfect import process, I guess. While
-it got the files moved, I needed more control.  And I wanted backups
-to be done automagically.  And NEF Raw files converted. There's just
-all these little things that need to be done while importing stuff,
-and it' be nicer if all of that stuff would be done at once,
-automatically. So I started thinking of scripting stuff.
+Perhaps there's more to this?
+-----------------------------
+
+For a while after that, I just copied stuff over with `exiftool`_.
+Not the perfect import process, I guess.
+
+While it got the files moved, I needed more control. Perhaps I needed
+to do more things.
+
+I had developed the habit of making backups of the files before
+importing them. While this was just an extra step of compressing the
+DCIM folder manually, I wanted backups to be done automagically.
+
+I had tried to use XMP sidecar files with digiKam, but this was not
+really cutting it, as XMP sidecars are a bit of a hack and there's no
+clear standard of how different apps should handle them. Saving
+metadata directly on files was a better idea, but ACDSee refused to save
+metadata directly on Nikon NEF raw files and used sidecars after all.
+
+There was, however, no such problem with DNG files. So I converted
+all of my NEF files to DNG.
+
+(As much as I sling mud at Adobe in this story, DNG is a genuinely
+great format, and I don't have problems with XMP either. Adobe
+*sometimes* does good things, as long as they stick to working toward
+real, honest open standards. ...not whatever the hell kind of monster
+PDF has become.)
+
+All in all, there's just all these little things that need to be done
+while importing stuff, and it'd be nicer if all of that stuff would be
+done at once, automatically.
+
+So I started thinking of automating stuff further.
 
 Power Automate: A Tool for De-shenaniganisation
 -----------------------------------------------
 
-The very first PowerShell script was very rudimentary, basically just
-running `exiftool` and 7-Zip's `7z`. I was doing the DNG conversions
-by hand, in `Adobe DNG Converter`_, which wasn't optimal.
+The very first PowerShell script I made for this purpose was very
+rudimentary, basically just running `exiftool` and 7-Zip's `7z`. I was
+doing the DNG conversions by hand, in `Adobe DNG Converter`_, which
+wasn't optimal.
 
 So I made a `Microsoft Power Automate`_ script to
-automate the DNG conversion part. It worked for what it did,
-converting the raw files to DNGs automatically and all that.
+automate converting the raw files to DNGs.
 
 It was a bit janky, though *not* because of Power Automate.
 
@@ -238,6 +264,25 @@ something.
 But all of that is neither here or now! We'll see how well Python
 serves me first.
 
+Final note
+----------
+
+In the early 2000s, I was a Perl developer. I tended to regard Python
+developers as a bit unhinged. They made some software that could be best
+described as "opinionated". At worst, it was a case of "oh, this app is
+great, *except for this one thing* that ruins everything."
+
+(I know, I know, we all know what happened to Perl. Now, point and laugh.
+I should have just learned COBOL while I was at it. *And* would be better
+paid for it.)
+
+While I had dabbled with Python before and made some
+`caveman class scripts for Blender and like`_,
+I only started seriously using Python in the 2020s.
+
+I *know* there were Weird Opinionated Python Projects in the early 2000s.
+
+
 .. _exiftool: https://exiftool.org/
 .. _Adobe DNG Converter: https://helpx.adobe.com/camera-raw/using/adobe-dng-converter.html
 .. _Microsoft Power Automate: https://www.microsoft.com/en-us/power-platform/products/power-automate
@@ -245,3 +290,4 @@ serves me first.
 .. _dnglab: https://github.com/dnglab/dnglab
 .. _digiKam: https://www.digikam.org/
 .. _GeoScooper: ../geo_scooper/
+.. _caveman class scripts for Blender and like: https://umbraroze.github.io/hackground/neverblender.html
