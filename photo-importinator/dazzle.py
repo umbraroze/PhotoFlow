@@ -7,6 +7,7 @@
 # for the full license terms.
 
 import sys
+from pathlib import Path
 from rich import print
 from rich.console import Console
 from rich.panel import Panel
@@ -45,7 +46,7 @@ def die(message:str,errcode:int=1):
     print(f":warning-emoji:  [bright_red]{message}[/bright_red]")
     sys.exit(errcode)
 
-def move_msg(source:str,destination:str):
+def move_msg(source:Path,destination:Path):
     print(f"{source} :right_arrow:  {destination}")
-def convert_msg(source:str,destination:str):
+def convert_msg(source:Path,destination:Path):
     print(f"[:gear-emoji:  [bright_green]Convert[/bright_green]] {source} :right_arrow: {destination}")

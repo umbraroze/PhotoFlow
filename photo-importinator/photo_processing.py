@@ -40,9 +40,10 @@ def identify_file(file:Path) -> str:
         case _:
             return s
 
-def read_date(file:Path) -> datetime.datetime:
+def read_date(file:Path) -> datetime.datetime | None:
     """Reads the date for the specified image file. Will try to grab the
-    original date from EXIF, or failing that, file modification time."""
+    original date from EXIF, or failing that, file modification time. Returns
+    None if file is unreadable by Exiv2."""
     mtime = datetime.datetime.fromtimestamp(os.path.getmtime(file))
     try:
         img = exiv2.ImageFactory.open(str(file))
