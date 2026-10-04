@@ -95,22 +95,41 @@ will switch back. Maybe I won’t. Who knows! It doesn’t matter! We’re
 out of the Adobe-Land, in the open waters, where the Sun shines and we
 do what we please!</p>
 <p>…Let’s get back to my tale about image importing.</p>
-<p>For a while after that, I just copied stuff over with
-<a class="reference external" href="https://exiftool.org/">exiftool</a>. Not the perfect import process, I guess. While
-it got the files moved, I needed more control.  And I wanted backups
-to be done automagically.  And NEF Raw files converted. There’s just
-all these little things that need to be done while importing stuff,
-and it’ be nicer if all of that stuff would be done at once,
-automatically. So I started thinking of scripting stuff.</p>
+</section>
+<section id="perhaps-there-s-more-to-this">
+<h2>Perhaps there’s more to this?<a class="headerlink" href="#perhaps-there-s-more-to-this" title="Link to this heading">¶</a></h2>
+<p>For a while after that, I just copied stuff over with <a class="reference external" href="https://exiftool.org/">exiftool</a>.
+Not the perfect import process, I guess.</p>
+<p>While it got the files moved, I needed more control. Perhaps I needed
+to do more things.</p>
+<p>I had developed the habit of making backups of the files before
+importing them. While this was just an extra step of compressing the
+DCIM folder manually, I wanted backups to be done automagically.</p>
+<p>I had tried to use XMP sidecar files with digiKam, but this was not
+really cutting it, as XMP sidecars are a bit of a hack and there’s no
+clear standard of how different apps should handle them. Saving
+metadata directly on files was a better idea, but ACDSee refused to save
+metadata directly on Nikon NEF raw files and used sidecars after all.</p>
+<p>There was, however, no such problem with DNG files. So I converted
+all of my NEF files to DNG.</p>
+<p>(As much as I sling mud at Adobe in this story, DNG is a genuinely
+great format, and I don’t have problems with XMP either. Adobe
+<em>sometimes</em> does good things, as long as they stick to working toward
+real, honest open standards. …not whatever the hell kind of monster
+PDF has become.)</p>
+<p>All in all, there’s just all these little things that need to be done
+while importing stuff, and it’d be nicer if all of that stuff would be
+done at once, automatically.</p>
+<p>So I started thinking of automating stuff further.</p>
 </section>
 <section id="power-automate-a-tool-for-de-shenaniganisation">
 <h2>Power Automate: A Tool for De-shenaniganisation<a class="headerlink" href="#power-automate-a-tool-for-de-shenaniganisation" title="Link to this heading">¶</a></h2>
-<p>The very first PowerShell script was very rudimentary, basically just
-running <cite>exiftool</cite> and 7-Zip’s <cite>7z</cite>. I was doing the DNG conversions
-by hand, in <a class="reference external" href="https://helpx.adobe.com/camera-raw/using/adobe-dng-converter.html">Adobe DNG Converter</a>, which wasn’t optimal.</p>
+<p>The very first PowerShell script I made for this purpose was very
+rudimentary, basically just running <cite>exiftool</cite> and 7-Zip’s <cite>7z</cite>. I was
+doing the DNG conversions by hand, in <a class="reference external" href="https://helpx.adobe.com/camera-raw/using/adobe-dng-converter.html">Adobe DNG Converter</a>, which
+wasn’t optimal.</p>
 <p>So I made a <a class="reference external" href="https://www.microsoft.com/en-us/power-platform/products/power-automate">Microsoft Power Automate</a> script to
-automate the DNG conversion part. It worked for what it did,
-converting the raw files to DNGs automatically and all that.</p>
+automate converting the raw files to DNGs.</p>
 <p>It was a bit janky, though <em>not</em> because of Power Automate.</p>
 <p>Power Automate is an incredible piece of Windows technology. Mostly
 because it can be used to easily script Windows applications and
@@ -235,6 +254,20 @@ and I go mad and rewrite the whole bloody thing in Erlang or
 something.</p>
 <p>But all of that is neither here or now! We’ll see how well Python
 serves me first.</p>
+</section>
+<section id="final-note">
+<h2>Final note<a class="headerlink" href="#final-note" title="Link to this heading">¶</a></h2>
+<p>In the early 2000s, I was a Perl developer. I tended to regard Python
+developers as a bit unhinged. They made some software that could be best
+described as “opinionated”. At worst, it was a case of “oh, this app is
+great, <em>except for this one thing</em> that ruins everything.”</p>
+<p>(I know, I know, we all know what happened to Perl. Now, point and laugh.
+I should have just learned COBOL while I was at it. <em>And</em> would be better
+paid for it.)</p>
+<p>While I had dabbled with Python before and made some
+<a class="reference external" href="https://umbraroze.github.io/hackground/neverblender.html">caveman class scripts for Blender and like</a>,
+I only started seriously using Python in the 2020s.</p>
+<p>I <em>know</em> there were Weird Opinionated Python Projects in the early 2000s.</p>
 </section>
 </section>
 
