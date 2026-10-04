@@ -1,0 +1,1 @@
+cp -Path build\* -Destination ..\..\PhotoFlow-web\ -Recurse -Force
