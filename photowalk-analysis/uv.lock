@@ -1,0 +1,23 @@
+version = 1
+revision = 3
+requires-python = ">=3.12"
+
+[[package]]
+name = "fit"
+version = "0.5.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/06/1b/b2cb459c54c2937723392be175fff5dd89d9fec0c2202a933c151ecce37b/fit-0.5.1.tar.gz", hash = "sha256:52fe23e53ebd973418099114068893e57626c1d23d232eaf38a252cbef73e61a", size = 46237, upload-time = "2026-03-08T19:02:11.429Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e7/7a/eead630b0ec75a0fea676f18e597ee2ee0881f1e8e93c85be6e877bb569f/fit-0.5.1-py3-none-any.whl", hash = "sha256:fc45bd0455784ba6292b50386e71f46b840094b1d6286bb6df987eadeb06c556", size = 53112, upload-time = "2026-03-08T19:02:10.113Z" },
+]
+
+[[package]]
+name = "photowalk-analysis"
+version = "0.1.0"
+source = { virtual = "." }
+dependencies = [
+    { name = "fit" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "fit", specifier = ">=0.5.1" }]

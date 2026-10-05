@@ -1,0 +1,9 @@
+[project]
+name = "photowalk-analysis"
+version = "0.1.0"
+description = "A tool for analysing GPS tracks from photowalks."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fit>=0.5.1",
+]
