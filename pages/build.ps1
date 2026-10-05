@@ -1,1 +1,0 @@
-uv run sphinx-build source build

@@ -6,6 +6,19 @@ requires-python = ">=3.12"
 dependencies = []
 
 [dependency-groups]
+dev = [
+    "poethepoet>=0.48.0",
+]
 docs = [
     "sphinx>=9.1.0",
 ]
+
+[tool.poe.tasks.build]
+cmd = "sphinx-build source build"
+
+[tool.poe.tasks.deploy]
+# TODO: Make this more portable and configurable
+shell = """
+Copy-Item -Path build\\* -Destination ..\\..\\PhotoFlow-web\\ -Recurse -Force
+"""
+interpreter = "powershell"
