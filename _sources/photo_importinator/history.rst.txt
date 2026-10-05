@@ -223,7 +223,7 @@ Python: The true Power Tool era is upon us
 
 Alas, even when PowerShell is in some regards more powerful than
 traditional Unix shells, there's the old Unix adage that PowerShell
-has not escaped from. "If you write a mega complex shellscript",
+has not escaped from. "If you write a mega complex shell script",
 the greybeards say, "you end up wishing you wrote that in a *real*
 scripting language."
 
@@ -237,7 +237,8 @@ use PowerShell for.
 
 So I decided to rewrite it in Python. So now we're here.
 
-The goals:
+The goals
+^^^^^^^^^
 
 - Object-oriented modular design.
 - The OOP design helps with:
@@ -251,6 +252,14 @@ The goals:
   Many of them now built-in!
 - Building a wider Python skillset for my future photography
   scripts! `GeoScooper`_ was only the beginning.
+
+Some initial results
+^^^^^^^^^^^^^^^^^^^^
+
+One of the obvious things I learned in this project is that my actual
+ability to organise a giant mess while I'm working on a Python project
+is miraculous, and about 75% of the time that's not so in a *good* sense.
+
 
 Distant future?
 ---------------
@@ -267,21 +276,26 @@ serves me first.
 Final note
 ----------
 
-In the early 2000s, I was a Perl developer. I tended to regard Python
-developers as a bit unhinged. They made some software that could be best
-described as "opinionated". At worst, it was a case of "oh, this app is
-great, *except for this one thing* that ruins everything."
-
+While I had dabbled with Python before and made some
+`caveman class scripts for Blender and like`_,
+I only started seriously using Python in the 2020s.
+In the early 2000s, I was just a clueless Perl developer.
 (I know, I know, we all know what happened to Perl. Now, point and laugh.
 I should have just learned COBOL while I was at it. *And* would be better
 paid for it.)
 
-While I had dabbled with Python before and made some
-`caveman class scripts for Blender and like`_,
-I only started seriously using Python in the 2020s.
+I tended to regard Python developers as a bit unhinged. They made some
+software that could be best described as "opinionated". This software was
+entirely unremarkable as far as the user was concerned -- just doing what
+it was supposed to be doing -- but there's this *one* thing that it does
+in a *very* particular, *very* distinct way. People might point out to
+the developer that perhaps they wanted this thing to be done in a
+different way. *No.* The developer was not having *any* of that. We
+got *years* of random Linux distro bug tracker drama out of that.
 
-I *know* there were Weird Opinionated Python Projects in the early 2000s.
-
+It's kind of weird that developing this project made me kind of see where
+this whole weirdly opinionated approach to software development actually
+came from.
 
 .. _exiftool: https://exiftool.org/
 .. _Adobe DNG Converter: https://helpx.adobe.com/camera-raw/using/adobe-dng-converter.html
