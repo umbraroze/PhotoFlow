@@ -260,6 +260,12 @@ One of the obvious things I learned in this project is that my actual
 ability to organise a giant mess while I'm working on a Python project
 is miraculous, and about 75% of the time that's not so in a *good* sense.
 
+It's "miraculous" in the sense that I can actually fix stupid design
+decisions. The project started as a giant ball of mud, really, but it's
+somehow turned into a pile of classes that talk to each other. I can look
+at a giant pile of problems, say "this needs to be organised better", and
+look, suddenly the whole project *gets* organised. I've learned a lot
+about the notion of separation of concerns during this project.
 
 Distant future?
 ---------------
