@@ -47,28 +47,28 @@ class Configuration:
         SCAN = 5
         UNPACK = 6
 
-    action: Action = None
-    __config: dict = None
-    configuration_file: Path = None
-    target: str = None
-    card: str = None
-    card_label: str = None
-    date: datetime.datetime = None
+    action: Action | None = None
+    __config: dict | None = None
+    configuration_file: Path | None = None
+    target: str | None = None
+    card: str | None = None
+    card_label: str | None = None
+    date: datetime.datetime | None = None
     skip_import: bool = False
     skip_backup: bool = False
     dry_run: bool = False
     leave_originals: bool = False
     overwrite_target: bool = False
-    camera: str = None
-    source_path: Path = None
-    target_path: Path = None
-    folder_structure: str = None
-    ignore: list[str] = None
-    convert_raw: list[str] = None
-    backup_path: Path = None
-    dnglab_path: Path = None
-    dnglab_flags: list = None
-    report_output_file: Path = None
+    camera: str | None = None
+    source_path: Path | None = None
+    target_path: Path | None = None
+    folder_structure: str | None = None
+    ignore: list[str] | None = None
+    convert_raw: list[str] | None = None
+    backup_path: Path | None = None
+    dnglab_path: Path | None = None
+    dnglab_flags: list | None = None
+    report_output_file: Path | None = None
 
     def is_valid_config(self) -> bool:
         """Returns true if the current configuration contains no problematic
@@ -119,22 +119,32 @@ class Configuration:
 
     def date_to_filename(self) -> str:
         """Returns the desired datestamp in ISO format suitable for file names."""
+        if self.date is None:
+            raise RuntimeError("Date not set.")
         return self.date.strftime('%Y%m%d')
     def date_to_str(self) -> str:
         """Returns the desired datestamp in ISO format."""
+        if self.date is None:
+            raise RuntimeError("Date not set.")
         return self.date.strftime('%Y-%m-%d')
     def date_to_path(self,date:datetime.datetime) -> Path:
         """Returns the directory structure for the given day."""
+        if self.folder_structure is None:
+            raise RuntimeError("Folder structure is not specified in the configuration.")
         d = date.date()
         return Path(self.folder_structure.format(year=d.year,month=d.month,day=d.day))
     def date_to_path_demo(self) -> Path:
         """Returns the target path, with date fields substituted with
         YYYY-MM-DD for demonstration purposes."""
         # Chop off the f-string formatting directives, just leaving the variable names
+        if self.folder_structure is None:
+            raise RuntimeError("Folder structure is not specified in the configuration.")
         m = re.sub(pattern=r'\{(.*?):(.*?)\}',repl=r'{\1}', string=self.folder_structure)
         return self.target_path / Path(m.format(year='YYYY',month='MM',day='DD'))
 
-    def read_configuration(self) -> dict:
+    def read_configuration(self):
+        if self.configuration_file is None:
+            raise RuntimeError("Configuration file not specified.")
         if not os.path.exists(self.configuration_file):
             logger.error("Configuration file {self.configuration_file} does not exist.")
             die(f"Configuration file {self.configuration_file} does not exist.")
@@ -146,7 +156,10 @@ class Configuration:
         """Parses the configuration file, setting the relevant
         fields. Will not overwrite the values if specified on command line.
         Must only be called after command line arguments are parsed and configuration file is read."""
-        
+
+        if self.__config is None:
+            raise RuntimeError("Configuration not read.")
+
         # No target? Then figure out the default target
         if self.target is None:
             try:
@@ -215,6 +228,10 @@ class Configuration:
     def __find_source_path_card(self):
         """Find source path for a card source."""
         # TODO: first check that the card is inserted (needs OS trickery?)
+        if self.card is None:
+            raise RuntimeError("Card not specified in the configuration file.")
+        if self.source_path is None:
+            raise RuntimeError("Source path not specified in the configuration file.")
         self.source_path = Path(self.card) / '/DCIM'
         try:
             if not self.source_path.exists():
@@ -265,6 +282,8 @@ class Configuration:
         # to be split up this way. Why, indeed, DON'T I just use os.walk()
         # for both types of sources?
 
+        if self.source_path is None:
+            raise RuntimeError("Source path not specified in the configuration file.")
         if self.is_cloud_source():
             return [self.source_path]
         else:
@@ -293,6 +312,8 @@ class Configuration:
     def list_cameras_and_targets(self):
         """Prints out valid cameras and targets. Only requres configuration
         file to be parsed."""
+        if self.__config is None:
+            raise RuntimeError("Configuration not read.")
         try:
             default_camera = self.__config['Cameras']['default']
         except KeyError:
