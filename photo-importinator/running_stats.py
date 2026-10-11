@@ -35,11 +35,17 @@ class RunningStats:
     session_stats: dict = None
     # Database file.
     db_file: Path = None
+    # Are we collecting stats, or are stats disabled for some reason?
+    running: bool = True
 
     def __init__(self,config:Configuration):
         self.db_file = config.running_stats_path()
         self.load()
         self.session_stats = {}
+        if config.dry_run:
+            self.running = False
+        else:
+            self.running = True
 
     def load(self):
         try:
@@ -52,6 +58,8 @@ class RunningStats:
             logger.debug(f"Running stats not found, will be stored in {self.db_file} when saved")
 
     def increment_day(self,day:date):
+        if not self.running:
+            return
         """Increment the specified day in the running count by one."""
         if day in self.stats:
             self.stats[day] += 1
@@ -63,18 +71,23 @@ class RunningStats:
             self.session_stats[day] = 1
 
     def print_session_stats(self):
+        if not self.running:
+            print(" [black]- Statistics collection disabled[/black]")
         # TODO: Use table system in Rich for formatting
         for d in sorted(self.session_stats.keys()):
             day = d.strftime("%Y-%m-%d")
             print(f" - {day}, {self.session_stats[d]} images")
 
     def save(self):
+        if not self.running:
+            return
         f = open(self.db_file,'wb')
         pickle.dump(self.stats,f)
         f.close()
         logger.debug(f"Running counts saved to {self.db_file}")
 
     def list_all(self):
+        # As this lists all the stats, this should be run even if running.
         # TODO: Use table system in Rich for formatting
         for d in sorted(self.stats.keys()):
             day = d.strftime("%Y-%m-%d")
