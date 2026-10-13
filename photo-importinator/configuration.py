@@ -230,11 +230,9 @@ class Configuration:
         # TODO: first check that the card is inserted (needs OS trickery?)
         if self.card is None:
             raise RuntimeError("Card not specified in the configuration file.")
-        if self.source_path is None:
-            raise RuntimeError("Source path not specified in the configuration file.")
         self.source_path = Path(self.card) / '/DCIM'
         try:
-            if not self.source_path.exists():
+            if self.source_path is not None and not self.source_path.exists():
                 logger.error(f"Source card {self.card} does not have a DCIM folder")
                 die(f"Source card {self.card} does not have a DCIM folder.")
         except OSError:
@@ -244,6 +242,8 @@ class Configuration:
 
     def __find_source_path_cloud(self):
         """Find source path for a cloud drive source."""
+        if self.__config is None:
+            raise RuntimeError("Configuration not done.")
         cloud_path = Path(self.__config['Cloud'][self.card])
         # Is it a path relative to home?
         if os.path.exists(Path.home() / cloud_path):
@@ -260,6 +260,8 @@ class Configuration:
     def is_cloud_source(self):
         """Return True if the source is a cloud drive (i.e. found in Cloud
         section of sources)"""
+        if self.__config is None:
+            raise RuntimeError("Configuration not done.")
         return self.card in self.__config['Cloud']
 
     def find_source_path(self):
